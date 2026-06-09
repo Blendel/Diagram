@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import type { SubNode as SubNodeType } from '../../../types/diagram'
+import type { SubNode as SubNodeType, HttpMethod } from '../../../types/diagram'
 import { SUB_CATALOG } from '../../../lib/subCatalog'
 
 const HANDLES: { id: string; position: Position }[] = [
@@ -8,6 +8,14 @@ const HANDLES: { id: string; position: Position }[] = [
   { id: 'b', position: Position.Bottom },
   { id: 'l', position: Position.Left },
 ]
+
+const METHOD_COLOR: Record<HttpMethod, string> = {
+  GET: '#16a34a',
+  POST: '#2563eb',
+  PUT: '#d97706',
+  PATCH: '#7c3aed',
+  DELETE: '#dc2626',
+}
 
 export function SubNodeView({ data, selected }: NodeProps<SubNodeType>) {
   const meta = SUB_CATALOG[data.kind] ?? SUB_CATALOG.function
@@ -31,6 +39,14 @@ export function SubNodeView({ data, selected }: NodeProps<SubNodeType>) {
           <span style={{ color: meta.accent }} className="shrink-0">
             <Icon size={16} />
           </span>
+          {data.kind === 'endpoint' && data.method && (
+            <span
+              className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold text-white"
+              style={{ background: METHOD_COLOR[data.method] }}
+            >
+              {data.method}
+            </span>
+          )}
           <span className="text-sm font-semibold truncate" style={{ color: 'var(--node-text)' }}>
             {data.label}
           </span>
@@ -41,6 +57,20 @@ export function SubNodeView({ data, selected }: NodeProps<SubNodeType>) {
             style={{ color: 'var(--node-text-muted)' }}
           >
             {data.signature}
+          </div>
+        )}
+        {(data.visibility === 'private' || data.async) && (
+          <div className="flex items-center gap-1.5 px-2.5 pb-1.5">
+            {data.visibility === 'private' && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
+                private
+              </span>
+            )}
+            {data.async && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium" style={{ background: `${meta.accent}22`, color: meta.accent }}>
+                async
+              </span>
+            )}
           </div>
         )}
       </div>

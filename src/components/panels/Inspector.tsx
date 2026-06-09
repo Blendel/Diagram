@@ -297,6 +297,34 @@ function EdgeInspector({ edge }: { edge: AppEdge }) {
         </select>
       </Field>
 
+      <label className="flex items-center gap-2 mb-3 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={!!data.bidirectional}
+          onChange={(e) => update(edge.id, { bidirectional: e.target.checked })}
+        />
+        Bidirezionale (freccia a entrambi i lati)
+      </label>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Molteplicità sorgente">
+          <input
+            className={inputCls}
+            placeholder="es. 1"
+            value={data.sourceMult ?? ''}
+            onChange={(e) => update(edge.id, { sourceMult: e.target.value })}
+          />
+        </Field>
+        <Field label="Molteplicità destinazione">
+          <input
+            className={inputCls}
+            placeholder="es. *"
+            value={data.targetMult ?? ''}
+            onChange={(e) => update(edge.id, { targetMult: e.target.value })}
+          />
+        </Field>
+      </div>
+
       <button onClick={() => remove(edge.id)} className={`${dangerBtnCls} mt-1`}>
         <Trash2 size={15} /> Elimina connessione
       </button>

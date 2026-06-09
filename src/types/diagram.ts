@@ -69,12 +69,20 @@ export type SubNodeKind =
   | 'view'
   | 'trigger'
 
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
 export interface SubNodeData {
   kind: SubNodeKind
   label: string
   /** e.g. "(id: string): Order" or "GET /orders/:id" */
   signature?: string
   description?: string
+  /** endpoint HTTP method */
+  method?: HttpMethod
+  /** function/method visibility */
+  visibility?: 'public' | 'private'
+  /** asynchronous function/method */
+  async?: boolean
   [key: string]: unknown
 }
 
@@ -178,12 +186,20 @@ export interface DbColumn {
   default?: string
 }
 
+export interface DbIndex {
+  id: string
+  name: string
+  columns: string[]
+  unique?: boolean
+}
+
 export interface DbTable {
   id: string
   name: string
   x: number
   y: number
   columns: DbColumn[]
+  indexes?: DbIndex[]
 }
 
 export type DbReferentialAction = 'cascade' | 'restrict' | 'set null' | 'no action'
@@ -257,6 +273,11 @@ export interface DiagramEdgeData {
   protocol: EdgeProtocol
   sync: EdgeSync
   animation?: EdgeAnimation
+  /** Draw an arrow at both ends. */
+  bidirectional?: boolean
+  /** Multiplicity labels near each end, e.g. "1", "*", "0..1". */
+  sourceMult?: string
+  targetMult?: string
   /** Derived at render time (not persisted). */
   broken?: boolean
   srcLoad?: number

@@ -25,7 +25,9 @@ import {
   type OnSelectionChangeParams,
 } from '@xyflow/react'
 import { Trash2 } from 'lucide-react'
-import type { SubNode, SubEdge, SubNodeKind } from '../../../types/diagram'
+import type { SubNode, SubEdge, SubNodeKind, HttpMethod } from '../../../types/diagram'
+
+const CODE_KINDS: SubNodeKind[] = ['function', 'usecase', 'controller', 'repository', 'adapter', 'port']
 import { SUB_CATALOG, SUB_ORDER } from '../../../lib/subCatalog'
 import { uid } from '../../../lib/uid'
 import { inputCls, dangerBtnCls } from '../../../lib/ui'
@@ -227,6 +229,47 @@ function Inner({ initialNodes, initialEdges, onChange, kinds = SUB_ORDER }: Prop
                 onChange={(e) => patch({ signature: e.target.value })}
               />
             </label>
+            {selected.data.kind === 'endpoint' && (
+              <label className="block mb-3">
+                <span className="block text-[11px] font-medium text-slate-500 mb-1">Metodo HTTP</span>
+                <select
+                  className={inputCls}
+                  value={selected.data.method ?? 'GET'}
+                  onChange={(e) => patch({ method: e.target.value as HttpMethod })}
+                >
+                  {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as HttpMethod[]).map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {CODE_KINDS.includes(selected.data.kind) && (
+              <>
+                <label className="block mb-3">
+                  <span className="block text-[11px] font-medium text-slate-500 mb-1">Visibilità</span>
+                  <select
+                    className={inputCls}
+                    value={selected.data.visibility ?? 'public'}
+                    onChange={(e) => patch({ visibility: e.target.value as 'public' | 'private' })}
+                  >
+                    <option value="public">public</option>
+                    <option value="private">private</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 mb-3 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!selected.data.async}
+                    onChange={(e) => patch({ async: e.target.checked })}
+                  />
+                  Asincrono
+                </label>
+              </>
+            )}
+
             <label className="block mb-3">
               <span className="block text-[11px] font-medium text-slate-500 mb-1">Descrizione</span>
               <textarea

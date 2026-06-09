@@ -20,7 +20,7 @@ import { ContextMenu } from './ContextMenu'
 import { BulkToolbar } from './BulkToolbar'
 import { HelperLines } from './HelperLines'
 import { NODE_CATALOG } from '../../lib/nodeCatalog'
-import { BROKEN_MARKER } from '../../lib/edgeCatalog'
+import { BROKEN_MARKER, DEFAULT_MARKER } from '../../lib/edgeCatalog'
 import { computeImpact } from '../../lib/impact'
 import { getHelperLines } from '../../lib/helperLines'
 import type { AppEdge, AppNode, NodeKind } from '../../types/diagram'
@@ -73,10 +73,17 @@ export function FlowCanvas() {
     () =>
       rawEdges.map((e) => {
         const isBroken = broken.has(e.id)
+        const endMarker = isBroken ? BROKEN_MARKER : e.markerEnd
         return {
           ...e,
           // Broken links keep a visible (red) direction arrow.
-          markerEnd: isBroken ? BROKEN_MARKER : e.markerEnd,
+          markerEnd: endMarker,
+          // Bidirectional edges get a matching arrow at the source end too.
+          markerStart: e.data?.bidirectional
+            ? isBroken
+              ? BROKEN_MARKER
+              : DEFAULT_MARKER
+            : undefined,
           data: {
             ...(e.data ?? { protocol: 'http' as const, sync: 'sync' as const }),
             broken: isBroken,

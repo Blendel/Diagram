@@ -17,6 +17,7 @@ export function FlowEdge({
   targetPosition,
   data,
   selected,
+  markerStart,
   markerEnd,
 }: EdgeProps<AppEdge>) {
   const [path, labelX, labelY] = getSmoothStepPath({
@@ -49,6 +50,7 @@ export function FlowEdge({
       <BaseEdge
         id={id}
         path={path}
+        markerStart={markerStart}
         markerEnd={markerEnd}
         style={{
           stroke,
@@ -103,6 +105,33 @@ export function FlowEdge({
             }}
           >
             {data.label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+
+      {data?.sourceMult && (
+        <EdgeLabelRenderer>
+          <div
+            className="absolute text-[10px] font-mono font-semibold pointer-events-none"
+            style={{
+              transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY - 10}px)`,
+              color: 'var(--node-text-muted)',
+            }}
+          >
+            {data.sourceMult}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+      {data?.targetMult && (
+        <EdgeLabelRenderer>
+          <div
+            className="absolute text-[10px] font-mono font-semibold pointer-events-none"
+            style={{
+              transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY - 10}px)`,
+              color: 'var(--node-text-muted)',
+            }}
+          >
+            {data.targetMult}
           </div>
         </EdgeLabelRenderer>
       )}

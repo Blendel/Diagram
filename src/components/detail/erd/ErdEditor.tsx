@@ -26,7 +26,7 @@ import {
   type OnSelectionChangeParams,
 } from '@xyflow/react'
 import { Plus, Trash2, KeyRound, Link2, Table2 } from 'lucide-react'
-import type { DbColumn, DbRelation, DbTable } from '../../../types/diagram'
+import type { DbColumn, DbRelation, DbTable, DbIndex } from '../../../types/diagram'
 import { uid } from '../../../lib/uid'
 import { inputCls, btnCls, dangerBtnCls } from '../../../lib/ui'
 
@@ -383,6 +383,42 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
                 }),
               )
             }}
+            onAddIndex={() =>
+              patchTable(selectedTable.id, (t) => ({
+                ...t,
+                indexes: [
+                  ...(t.indexes ?? []),
+                  { id: uid('idx'), name: `idx_${(t.indexes?.length ?? 0) + 1}`, columns: [], unique: false },
+                ],
+              }))
+            }
+            onPatchIndex={(iid, p) =>
+              patchTable(selectedTable.id, (t) => ({
+                ...t,
+                indexes: (t.indexes ?? []).map((ix) => (ix.id === iid ? { ...ix, ...p } : ix)),
+              }))
+            }
+            onToggleIndexColumn={(iid, colId) =>
+              patchTable(selectedTable.id, (t) => ({
+                ...t,
+                indexes: (t.indexes ?? []).map((ix) =>
+                  ix.id === iid
+                    ? {
+                        ...ix,
+                        columns: ix.columns.includes(colId)
+                          ? ix.columns.filter((c) => c !== colId)
+                          : [...ix.columns, colId],
+                      }
+                    : ix,
+                ),
+              }))
+            }
+            onRemoveIndex={(iid) =>
+              patchTable(selectedTable.id, (t) => ({
+                ...t,
+                indexes: (t.indexes ?? []).filter((ix) => ix.id !== iid),
+              }))
+            }
             onDelete={() => deleteTable(selectedTable.id)}
           />
         ) : selectedRel ? (
@@ -431,6 +467,10 @@ function TablePanel({
   onAddColumn,
   onPatchColumn,
   onRemoveColumn,
+  onAddIndex,
+  onPatchIndex,
+  onToggleIndexColumn,
+  onRemoveIndex,
   onDelete,
 }: {
   table: DbTable
@@ -438,6 +478,10 @@ function TablePanel({
   onAddColumn: () => void
   onPatchColumn: (cid: string, p: Partial<DbColumn>) => void
   onRemoveColumn: (cid: string) => void
+  onAddIndex: () => void
+  onPatchIndex: (iid: string, p: Partial<DbIndex>) => void
+  onToggleIndexColumn: (iid: string, colId: string) => void
+  onRemoveIndex: (iid: string) => void
   onDelete: () => void
 }) {
   return (
@@ -503,6 +547,59 @@ function TablePanel({
                 null
               </label>
             </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[11px] font-medium text-slate-500">Indici</span>
+        <button className={btnCls} onClick={onAddIndex}>
+          <Plus size={13} /> Indice
+        </button>
+      </div>
+      <ul className="flex flex-col gap-2 mb-3">
+        {(table.indexes ?? []).map((ix) => (
+          <li key={ix.id} className="rounded-md border border-slate-200 dark:border-slate-700 p-2">
+            <div className="flex items-center gap-1.5">
+              <input
+                className={`${inputCls} flex-1`}
+                value={ix.name}
+                onChange={(e) => onPatchIndex(ix.id, { name: e.target.value })}
+              />
+              <button
+                className="shrink-0 grid place-items-center w-7 h-7 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
+                onClick={() => onRemoveIndex(ix.id)}
+                title="Rimuovi indice"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {table.columns.map((c) => {
+                const on = ix.columns.includes(c.id)
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => onToggleIndexColumn(ix.id, c.id)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] border ${
+                      on
+                        ? 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                )
+              })}
+            </div>
+            <label className="inline-flex items-center gap-1 mt-1.5 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!ix.unique}
+                onChange={(e) => onPatchIndex(ix.id, { unique: e.target.checked })}
+              />
+              unique
+            </label>
           </li>
         ))}
       </ul>
