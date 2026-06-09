@@ -22,30 +22,44 @@ npm run preview  # anteprima della build
 
 ## Funzionalità
 
-- **Nodi tipizzati**: servizio, database, coda/broker, API gateway, cache, client
-- **Gruppi/boundary** ridimensionabili (cluster, VPC, dominio) renderizzati dietro i nodi
-- **Connessioni** colorate per protocollo (HTTP, gRPC, evento, DB, TCP), con
-  etichetta e animazione del flusso per le chiamate asincrone
-- **Inspector** con metadati per nodo (tecnologia, porta, owner, link, descrizione)
-  e per connessione (protocollo, sync/async)
-- **Stati live** sul nodo (operativo / degradato / non disponibile / sconosciuto)
-- **Import/Export JSON** + salvataggio automatico in IndexedDB
+- **Nodi tipizzati**: servizio, database, coda/broker, API gateway, cache, client,
+  **sistema esterno** e gruppi/boundary; forme geometriche, colori (palette + libero)
+- **Stato da carico**: uno slider pilota lo stato (operativo → degradato → non disponibile)
+- **Connessioni** per protocollo (HTTP, gRPC, evento, DB, TCP) con animazioni
+  flow / pulse / pub-sub e **propagazione a cascata dei link interrotti**
+- **Drill-down** (doppio click): sotto-grafo dei servizi, **schema ERD + oggetti** dei
+  database, **designer di pagine wireframe** con modalità anteprima interattiva
+- **Dark mode**, **undo/redo**, context menu, status bar con log eventi
+- **Import/Export JSON** + **export PNG/SVG** + salvataggio automatico in IndexedDB
+
+## Esempio
+
+Importa [examples/demo-shopsphere.json](examples/demo-shopsphere.json) (Toolbar → Importa)
+per una demo completa, oppure rigenerala con `node scripts/gen-example.mjs`.
 
 ## Struttura
 
 ```
 src/
-  types/diagram.ts            # modello dati (nodi, edge, file)
-  lib/                        # cataloghi (nodi, edge), seed, I/O
-  store/useDiagramStore.ts    # stato Zustand + persistenza
+  types/diagram.ts            # modello dati (nodi, edge, sotto-grafi, file)
+  lib/                        # cataloghi, seed, I/O, impatto, forme, colori
+  store/                      # stato Zustand + persistenza (diagramma e UI)
   components/
-    canvas/                   # FlowCanvas, nodi, edge, drag-and-drop
-    panels/                   # Toolbar, NodePalette, Inspector
+    canvas/                   # FlowCanvas, nodi, edge, context menu
+    panels/                   # Toolbar, NodePalette, Inspector, StatusBar
+    detail/                   # vista dettaglio: ERD, sotto-grafo, wireframe
 ```
 
-## Idee per i prossimi passi
+## Roadmap
 
-- Annidamento reale dei nodi nei gruppi (parent/extent on drag)
-- Multi-diagramma (lista di architetture salvate)
-- Aggancio a dati reali per gli stati live (health check / telemetria)
-- Export PNG/SVG; impacchettamento desktop con Tauri
+- [x] Export PNG/SVG
+- [x] Multi-diagramma (lista di architetture salvate)
+- [x] Selezione multipla + operazioni di gruppo (allinea/distribuisci/colore/stato)
+- [x] Annidamento reale dei nodi nei gruppi (parent/extent on drag)
+- [x] Auto-layout (dagre)
+- [ ] Aggancio a dati reali per gli stati live (health check / telemetria)
+- [ ] Backend + condivisione / collaborazione
+
+## Licenza
+
+[MIT](LICENSE)
