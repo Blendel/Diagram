@@ -25,7 +25,7 @@ import {
   type Edge,
   type OnSelectionChangeParams,
 } from '@xyflow/react'
-import { Trash2, Pencil, Play, BringToFront, SendToBack, CopyPlus } from 'lucide-react'
+import { Trash2, Pencil, Play, BringToFront, SendToBack, CopyPlus, Undo2, Redo2 } from 'lucide-react'
 import type { UiNode, UiKind, UiNodeData } from '../../../types/diagram'
 import { UI_CATALOG, UI_ORDER } from '../../../lib/uiCatalog'
 import { uid } from '../../../lib/uid'
@@ -124,10 +124,52 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
   const [nodes, setNodes] = useState<UiNode[]>(initialNodes)
   const [edges, setEdges] = useState<Edge[]>(initialEdges)
   const [sel, setSel] = useState<string | null>(null)
+  const [selIds, setSelIds] = useState<string[]>([])
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [helperH, setHelperH] = useState<number | undefined>(undefined)
   const [helperV, setHelperV] = useState<number | undefined>(undefined)
   const { screenToFlowPosition } = useReactFlow()
+
+  // --- Local undo/redo history (the wireframe owns its own state) ---
+  const nodesRef = useRef(nodes)
+  nodesRef.current = nodes
+  const edgesRef = useRef(edges)
+  edgesRef.current = edges
+  const past = useRef<{ nodes: UiNode[]; edges: Edge[] }[]>([])
+  const future = useRef<{ nodes: UiNode[]; edges: Edge[] }[]>([])
+  const coalesce = useRef<{ key: string | null; t: number }>({ key: null, t: 0 })
+  const pushHistory = useCallback((key?: string) => {
+    const now = Date.now()
+    if (key && key === coalesce.current.key && now - coalesce.current.t < 700) {
+      coalesce.current.t = now
+      return
+    }
+    past.current = [...past.current, { nodes: nodesRef.current, edges: edgesRef.current }].slice(-50)
+    future.current = []
+    coalesce.current = { key: key ?? null, t: now }
+  }, [])
+  const undo = useCallback(() => {
+    if (past.current.length === 0) return
+    const prev = past.current[past.current.length - 1]
+    past.current = past.current.slice(0, -1)
+    future.current = [{ nodes: nodesRef.current, edges: edgesRef.current }, ...future.current].slice(0, 50)
+    coalesce.current = { key: null, t: 0 }
+    setNodes(prev.nodes)
+    setEdges(prev.edges)
+    setSel(null)
+    setSelIds([])
+  }, [])
+  const redo = useCallback(() => {
+    if (future.current.length === 0) return
+    const next = future.current[0]
+    future.current = future.current.slice(1)
+    past.current = [...past.current, { nodes: nodesRef.current, edges: edgesRef.current }].slice(-50)
+    coalesce.current = { key: null, t: 0 }
+    setNodes(next.nodes)
+    setEdges(next.edges)
+    setSel(null)
+    setSelIds([])
+  }, [])
 
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -146,6 +188,8 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
 
   const onNodesChange = useCallback(
     (ch: NodeChange<UiNode>[]) => {
+      if (ch.some((c) => c.type === 'remove')) pushHistory()
+      else if (ch.some((c) => c.type === 'dimensions' && c.resizing)) pushHistory('resize')
       const only = ch.length === 1 ? ch[0] : null
       if (only && only.type === 'position' && only.dragging && only.position) {
         const lines = getHelperLines(only, nodes)
@@ -161,16 +205,17 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
     },
     [nodes, helperH, helperV],
   )
-  const onSelectionChange = useCallback(
-    ({ nodes: n }: OnSelectionChangeParams) => setSel(n[0]?.id ?? null),
-    [],
-  )
+  const onSelectionChange = useCallback(({ nodes: n }: OnSelectionChangeParams) => {
+    setSelIds(n.map((x) => x.id))
+    setSel(n.length === 1 ? n[0].id : null)
+  }, [])
   const onEdgesChange = useCallback(
     (ch: EdgeChange<Edge>[]) => setEdges((es) => applyEdgeChanges(ch, es)),
     [],
   )
   const onConnect = useCallback((c: Connection) => {
     if (!c.source || !c.target) return
+    pushHistory()
     setEdges((es) =>
       addEdge(
         {
@@ -186,9 +231,11 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
   }, [])
 
   const addAt = (kind: UiKind, position: { x: number; y: number }) => {
+    pushHistory()
     const n = makeUi(kind, position)
     setNodes((ns) => (kind === 'frame' ? [n, ...ns] : [...ns, n]))
     setSel(n.id)
+    setSelIds([n.id])
   }
 
   const onDragStart = (e: DragEvent, kind: UiKind) => {
@@ -207,15 +254,26 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
   }
 
   const selected = nodes.find((n) => n.id === sel) ?? null
-  const patch = (p: Partial<UiNodeData>) =>
+  const patch = (p: Partial<UiNodeData>) => {
+    pushHistory('patch')
     setNodes((ns) => ns.map((n) => (n.id === sel ? { ...n, data: { ...n.data, ...p } } : n)))
-  const setDevice = (w: number, h: number) =>
-    setNodes((ns) => ns.map((n) => (n.id === sel ? { ...n, style: { ...n.style, width: w, height: h } } : n)))
-  const del = () => {
-    setNodes((ns) => ns.filter((n) => n.id !== sel))
-    setSel(null)
   }
-  const bringForward = () =>
+  const setDevice = (w: number, h: number) => {
+    pushHistory()
+    setNodes((ns) => ns.map((n) => (n.id === sel ? { ...n, style: { ...n.style, width: w, height: h } } : n)))
+  }
+  const del = () => {
+    const ids = selIds.length ? selIds : sel ? [sel] : []
+    if (ids.length === 0) return
+    const set = new Set(ids)
+    pushHistory()
+    setNodes((ns) => ns.filter((n) => !set.has(n.id)))
+    setEdges((es) => es.filter((e) => !set.has(e.source) && !set.has(e.target)))
+    setSel(null)
+    setSelIds([])
+  }
+  const bringForward = () => {
+    pushHistory()
     setNodes((ns) => {
       const i = ns.findIndex((n) => n.id === sel)
       if (i < 0 || i === ns.length - 1) return ns
@@ -224,7 +282,9 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
       copy.push(x)
       return copy
     })
-  const sendBackward = () =>
+  }
+  const sendBackward = () => {
+    pushHistory()
     setNodes((ns) => {
       const i = ns.findIndex((n) => n.id === sel)
       if (i <= 0) return ns
@@ -233,23 +293,29 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
       copy.unshift(x)
       return copy
     })
-  const duplicateEl = () => {
-    const n = nodes.find((x) => x.id === sel)
-    if (!n) return
-    const clone: UiNode = {
+  }
+  const duplicateSelected = () => {
+    const ids = selIds.length ? selIds : sel ? [sel] : []
+    const set = new Set(ids)
+    const picked = nodes.filter((n) => set.has(n.id))
+    if (picked.length === 0) return
+    pushHistory()
+    const clones: UiNode[] = picked.map((n) => ({
       ...n,
       id: uid('ui'),
       position: { x: n.position.x + 16, y: n.position.y + 16 },
       selected: false,
       data: { ...n.data },
-    }
-    setNodes((ns) => [...ns, clone])
-    setSel(clone.id)
+    }))
+    setNodes((ns) => [...ns, ...clones])
+    setSel(clones.length === 1 ? clones[0].id : null)
+    setSelIds(clones.map((c) => c.id))
   }
   // Duplicate a frame and the elements it contains as a responsive variant beside it.
   const createVariant = () => {
     const frame = nodes.find((n) => n.id === sel && n.data.kind === 'frame')
     if (!frame) return
+    pushHistory()
     const fx = frame.position.x
     const fy = frame.position.y
     const fw = dimVal(frame.style?.width, UI_CATALOG.frame.w)
@@ -281,7 +347,7 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
     setSel(newFrame.id)
   }
 
-  // Edit-mode shortcuts: duplicate (Ctrl+D), copy/paste (Ctrl+C / Ctrl+V).
+  // Edit-mode shortcuts: undo/redo, duplicate, copy/paste.
   useEffect(() => {
     if (mode !== 'edit') return
     const onKey = (e: KeyboardEvent) => {
@@ -289,15 +355,23 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
       const tag = (e.target as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
       const k = e.key.toLowerCase()
-      if (k === 'd' && sel) {
+      const ids = selIds.length ? selIds : sel ? [sel] : []
+      if (k === 'z') {
         e.preventDefault()
-        duplicateEl()
-      } else if (k === 'c' && sel) {
+        e.shiftKey ? redo() : undo()
+      } else if (k === 'y') {
         e.preventDefault()
-        const n = nodes.find((x) => x.id === sel)
-        if (n) wireClipboard = [{ ...n, data: { ...n.data } }]
+        redo()
+      } else if (k === 'd' && ids.length) {
+        e.preventDefault()
+        duplicateSelected()
+      } else if (k === 'c' && ids.length) {
+        e.preventDefault()
+        const set = new Set(ids)
+        wireClipboard = nodes.filter((n) => set.has(n.id)).map((n) => ({ ...n, data: { ...n.data } }))
       } else if (k === 'v' && wireClipboard.length) {
         e.preventDefault()
+        pushHistory()
         const clones = wireClipboard.map((n) => ({
           ...n,
           id: uid('ui'),
@@ -306,13 +380,14 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
           data: { ...n.data },
         }))
         setNodes((ns) => [...ns, ...clones])
-        setSel(clones[clones.length - 1]?.id ?? null)
+        setSel(clones.length === 1 ? clones[0].id : null)
+        setSelIds(clones.map((c) => c.id))
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, sel, nodes])
+  }, [mode, sel, selIds, nodes])
 
   const frames = nodes.filter((n) => n.data.kind === 'frame')
 
@@ -333,6 +408,24 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
             <Play size={14} /> Anteprima
           </button>
         </div>
+        {mode === 'edit' && (
+          <div className="flex items-center gap-1">
+            <button
+              className="grid place-items-center w-7 h-7 rounded text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+              title="Annulla (Ctrl+Z)"
+              onClick={undo}
+            >
+              <Undo2 size={15} />
+            </button>
+            <button
+              className="grid place-items-center w-7 h-7 rounded text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+              title="Ripristina (Ctrl+Shift+Z)"
+              onClick={redo}
+            >
+              <Redo2 size={15} />
+            </button>
+          </div>
+        )}
         {mode === 'preview' && (
           <span className="text-[11px] text-slate-400">
             Interagisci con la pagina: scrivi negli input, attiva toggle/checkbox/tab, i bottoni
@@ -388,9 +481,12 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onSelectionChange={onSelectionChange}
+              onNodeDragStart={() => pushHistory()}
               connectionMode={ConnectionMode.Loose}
               elementsSelectable
               elevateNodesOnSelect={false}
+              selectionOnDrag
+              panOnDrag={[1, 2]}
               deleteKeyCode={['Backspace', 'Delete']}
               minZoom={0.3}
               maxZoom={2}
@@ -412,15 +508,16 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
                 setDevice={setDevice}
                 onForward={bringForward}
                 onBackward={sendBackward}
-                onDuplicate={duplicateEl}
+                onDuplicate={duplicateSelected}
                 onCreateVariant={createVariant}
                 onDelete={del}
               />
             ) : (
               <div className="text-sm text-slate-400 p-3 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                Parti da uno <b>Schermo / Frame</b>, poi trascina gli elementi. Seleziona un
-                elemento per modificarne testo e <b>caratteristiche</b> (numero di righe,
-                varianti, link…). Passa ad <b>Anteprima</b> per provarlo.
+                Parti da uno <b>Schermo / Frame</b>, poi trascina gli elementi.
+                <br />• Trascina nel vuoto per <b>selezionare più elementi</b> (pan col tasto destro/centrale).
+                <br />• Collega gli elementi con le <b>frecce</b> (al passaggio del mouse).
+                <br />• <b>Ctrl+Z</b> per annullare. Passa ad <b>Anteprima</b> per provarlo.
               </div>
             )}
           </div>
