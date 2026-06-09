@@ -29,6 +29,7 @@ import {
   Star,
   SquareDashed,
   SquareStack,
+  StickyNote,
 } from 'lucide-react'
 import type { UiKind } from '../types/diagram'
 
@@ -79,6 +80,7 @@ export const UI_CATALOG: Record<UiKind, UiKindMeta> = {
   icon: { kind: 'icon', label: 'Icona', icon: Star, accent: '#d97706', w: 48, h: 48 },
   container: { kind: 'container', label: 'Contenitore', icon: SquareDashed, accent: '#94a3b8', w: 320, h: 220 },
   modal: { kind: 'modal', label: 'Modal / Dialog', icon: SquareStack, accent: '#1e293b', w: 320, h: 200 },
+  note: { kind: 'note', label: 'Nota', icon: StickyNote, accent: '#d97706', w: 180, h: 120 },
 }
 
 export const UI_ORDER: UiKind[] = [
@@ -115,5 +117,6 @@ export const UI_ORDER: UiKind[] = [
   'badge',
   'progress',
   'pagination',
+  'note',
   'divider',
 ]

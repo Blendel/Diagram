@@ -126,6 +126,7 @@ export type UiKind =
   | 'badge'
   | 'container'
   | 'modal'
+  | 'note'
   | 'divider'
 
 export interface UiNodeData {

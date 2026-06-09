@@ -60,7 +60,7 @@ export function WireframePreview({ nodes }: { nodes: UiNode[] }) {
     const fy = current.position.y
     const { w: fw, h: fh } = dim(current)
     const inside = nodes.filter((n) => {
-      if (n.data.kind === 'frame') return false
+      if (n.data.kind === 'frame' || n.data.kind === 'note') return false
       const { w, h } = dim(n)
       const cx = n.position.x + w / 2
       const cy = n.position.y + h / 2
@@ -118,7 +118,7 @@ export function WireframePreview({ nodes }: { nodes: UiNode[] }) {
   return (
     <div className="flex-1 min-h-0 overflow-auto rounded-lg bg-slate-100 dark:bg-slate-950/40 p-4">
       <div className="relative mx-auto" style={{ width: maxX - minX, height: maxY - minY }}>
-        {nodes.map((el) => renderEl(el, minX, minY))}
+        {nodes.filter((el) => el.data.kind !== 'note').map((el) => renderEl(el, minX, minY))}
       </div>
     </div>
   )

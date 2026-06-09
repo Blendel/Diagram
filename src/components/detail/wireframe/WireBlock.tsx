@@ -559,6 +559,15 @@ export function WireBlock({
           </div>
         </div>
       )
+    case 'note':
+      return (
+        <div
+          className="w-full h-full rounded-md p-2 text-xs overflow-hidden shadow-sm whitespace-pre-wrap break-words"
+          style={{ background: '#fef9c3', color: '#713f12', border: '1px solid #fde68a' }}
+        >
+          {label}
+        </div>
+      )
     default:
       return <div className="w-full h-full" />
   }
