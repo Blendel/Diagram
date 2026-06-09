@@ -9,6 +9,7 @@ import type { ComponentChildren, SubNodeKind } from '../../types/diagram'
 
 // Heavy editors are code-split: loaded only when a detail view is opened.
 const ErdEditor = lazy(() => import('./erd/ErdEditor').then((m) => ({ default: m.ErdEditor })))
+const DocEditor = lazy(() => import('./erd/DocEditor').then((m) => ({ default: m.DocEditor })))
 const SubGraphEditor = lazy(() =>
   import('./subgraph/SubGraphEditor').then((m) => ({ default: m.SubGraphEditor })),
 )
@@ -177,12 +178,43 @@ export function DetailView() {
         >
           {isDb ? (
             dbTab === 'schema' ? (
-            <ErdEditor
-              key={`${id}-erd`}
-              initialTables={node.data.tables ?? []}
-              initialRelations={node.data.relations ?? []}
-              onChange={(tables, relations) => update(id, { tables, relations })}
-            />
+            <div className="flex flex-col h-full min-h-0 gap-2">
+              <div className="inline-flex self-start rounded-md bg-slate-100 dark:bg-slate-800 p-0.5">
+                {(['relational', 'document'] as const).map((m) => {
+                  const active = (node.data.dbMode ?? 'relational') === m
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => update(id, { dbMode: m })}
+                      className={`px-3 py-1 rounded text-sm font-medium transition ${
+                        active
+                          ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-slate-100'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {m === 'relational' ? 'Relazionale' : 'Documentale'}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex-1 min-h-0">
+                {(node.data.dbMode ?? 'relational') === 'document' ? (
+                  <DocEditor
+                    key={`${id}-doc`}
+                    initialCollections={node.data.collections ?? []}
+                    initialReferences={node.data.references ?? []}
+                    onChange={(collections, references) => update(id, { collections, references })}
+                  />
+                ) : (
+                  <ErdEditor
+                    key={`${id}-erd`}
+                    initialTables={node.data.tables ?? []}
+                    initialRelations={node.data.relations ?? []}
+                    onChange={(tables, relations) => update(id, { tables, relations })}
+                  />
+                )}
+              </div>
+            </div>
           ) : (
             <SubGraphEditor
               key={`${id}-obj`}

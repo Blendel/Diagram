@@ -202,6 +202,34 @@ export interface DbTable {
   indexes?: DbIndex[]
 }
 
+// --- NoSQL / document modeling ---------------------------------------------
+
+export interface DbField {
+  id: string
+  name: string
+  type: string
+  /** array of `type` */
+  array?: boolean
+  /** embedded object/sub-document */
+  embedded?: boolean
+}
+
+export interface DbCollection {
+  id: string
+  name: string
+  x: number
+  y: number
+  fields: DbField[]
+}
+
+export interface DbReference {
+  id: string
+  source: string
+  target: string
+  sourceField?: string
+  name?: string
+}
+
 export type DbReferentialAction = 'cascade' | 'restrict' | 'set null' | 'no action'
 
 export interface DbRelation {
@@ -247,6 +275,11 @@ export interface DiagramNodeData {
   /** Database drill-down: relational schema. */
   tables?: DbTable[]
   relations?: DbRelation[]
+
+  /** Database modeling mode + NoSQL/document schema. */
+  dbMode?: 'relational' | 'document'
+  collections?: DbCollection[]
+  references?: DbReference[]
 
   /** Client drill-down: page wireframe / UI design. */
   wireframe?: Wireframe
