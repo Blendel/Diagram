@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Layers, Check, Plus, Copy, Trash2, Pencil, ChevronDown } from 'lucide-react'
+import { Layers, Check, Plus, Copy, Trash2, Pencil, ChevronDown, LayoutTemplate } from 'lucide-react'
 import { useDiagramStore } from '../../store/useDiagramStore'
+import { TEMPLATES } from '../../lib/templates'
 
 export function DiagramsMenu() {
   const diagrams = useDiagramStore((s) => s.diagrams)
@@ -11,6 +12,7 @@ export function DiagramsMenu() {
   const deleteDiagram = useDiagramStore((s) => s.deleteDiagram)
   const renameDiagram = useDiagramStore((s) => s.renameDiagram)
   const newDiagram = useDiagramStore((s) => s.newDiagram)
+  const createDiagram = useDiagramStore((s) => s.createDiagram)
   const [open, setOpen] = useState(false)
 
   const list = Object.values(diagrams).sort((a, b) => b.updatedAt - a.updatedAt)
@@ -112,6 +114,26 @@ export function DiagramsMenu() {
               >
                 <Plus size={15} /> Nuovo diagramma
               </button>
+            </div>
+
+            <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 flex items-center gap-1.5">
+                <LayoutTemplate size={12} /> Crea da template
+              </div>
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    const { nodes, edges } = t.build()
+                    createDiagram(t.name, nodes, edges)
+                    setOpen(false)
+                  }}
+                  className="block w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                >
+                  <span className="block text-sm text-slate-700 dark:text-slate-200">{t.name}</span>
+                  <span className="block text-[10px] text-slate-400">{t.description}</span>
+                </button>
+              ))}
             </div>
           </div>
         </>

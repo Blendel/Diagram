@@ -49,6 +49,10 @@ interface UiState {
   showInspector: boolean
   togglePalette: () => void
   toggleInspector: () => void
+
+  /** Snap nodes to a grid while dragging on the main canvas. */
+  snapToGrid: boolean
+  toggleSnap: () => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -79,6 +83,9 @@ export const useUiStore = create<UiState>()(
       showInspector: true,
       togglePalette: () => set({ showPalette: !get().showPalette }),
       toggleInspector: () => set({ showInspector: !get().showInspector }),
+
+      snapToGrid: false,
+      toggleSnap: () => set({ snapToGrid: !get().snapToGrid }),
     }),
     {
       name: 'architect:ui',
@@ -87,6 +94,7 @@ export const useUiStore = create<UiState>()(
         theme: state.theme,
         showPalette: state.showPalette,
         showInspector: state.showInspector,
+        snapToGrid: state.snapToGrid,
       }),
     },
   ),

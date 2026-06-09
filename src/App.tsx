@@ -25,6 +25,9 @@ function App() {
   const hydrated = useDiagramStore((s) => s.hydrated)
   const undo = useDiagramStore((s) => s.undo)
   const redo = useDiagramStore((s) => s.redo)
+  const selectAll = useDiagramStore((s) => s.selectAll)
+  const copySelection = useDiagramStore((s) => s.copySelection)
+  const paste = useDiagramStore((s) => s.paste)
   const theme = useUiStore((s) => s.theme)
   const showPalette = useUiStore((s) => s.showPalette)
   const showInspector = useUiStore((s) => s.showInspector)
@@ -33,27 +36,37 @@ function App() {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
-  // Global undo/redo. Let native text undo win inside form fields.
+  // Global shortcuts: undo/redo, select-all, copy/paste. Native behavior wins in form fields.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // The detail view owns its own canvas state; don't undo the architecture under it.
+      // The detail view owns its own canvas state; ignore global shortcuts under it.
       if (useUiStore.getState().detailNodeId) return
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') {
-        // also support Ctrl+Y for redo
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !isEditableTarget(e.target)) {
-          e.preventDefault()
-          redo()
-        }
-        return
-      }
+      if (!(e.ctrlKey || e.metaKey)) return
       if (isEditableTarget(e.target)) return
-      e.preventDefault()
-      if (e.shiftKey) redo()
-      else undo()
+      const k = e.key.toLowerCase()
+      if (k === 'z') {
+        e.preventDefault()
+        e.shiftKey ? redo() : undo()
+      } else if (k === 'y') {
+        e.preventDefault()
+        redo()
+      } else if (k === 'a') {
+        e.preventDefault()
+        selectAll()
+      } else if (k === 'c') {
+        const ids = useDiagramStore.getState().selectedNodeIds
+        if (ids.length) {
+          e.preventDefault()
+          copySelection(ids)
+        }
+      } else if (k === 'v') {
+        e.preventDefault()
+        paste()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo])
+  }, [undo, redo, selectAll, copySelection, paste])
 
   return (
     <ReactFlowProvider>

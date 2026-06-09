@@ -23,6 +23,30 @@ import { SCHEMA_VERSION } from '../types/diagram'
 
 /** Alignment mode for multi-selection group operations. */
 export type AlignMode = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
+
+/**
+ * Removes `ids` from the node list and detaches any orphaned children: a node
+ * whose parent is being deleted is converted back to absolute coordinates so it
+ * never points to a missing parent.
+ */
+function dropNodes(nodes: AppNode[], ids: Set<string>): AppNode[] {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  return nodes
+    .filter((n) => !ids.has(n.id))
+    .map((n) => {
+      if (n.parentId && ids.has(n.parentId)) {
+        const parent = byId.get(n.parentId)
+        const abs = parent
+          ? { x: n.position.x + parent.position.x, y: n.position.y + parent.position.y }
+          : n.position
+        return { ...n, parentId: undefined, extent: undefined, position: abs }
+      }
+      return n
+    })
+}
+
+/** In-memory clipboard for copy/paste across diagrams (not persisted). */
+let clipboard: { nodes: AppNode[]; edges: AppEdge[] } | null = null
 import { NODE_CATALOG } from '../lib/nodeCatalog'
 import { DEFAULT_MARKER } from '../lib/edgeCatalog'
 import { SEED_EDGES, SEED_NODES } from '../lib/seed'
@@ -147,6 +171,11 @@ interface DiagramState {
   alignNodes: (ids: string[], mode: AlignMode) => void
   distributeNodes: (ids: string[], axis: 'h' | 'v') => void
 
+  // Clipboard & selection
+  copySelection: (ids: string[]) => void
+  paste: () => void
+  selectAll: () => void
+
   // Document-level
   setName: (name: string) => void
   newDiagram: () => void
@@ -155,6 +184,7 @@ interface DiagramState {
 
   // Multi-diagram library
   _commitActive: () => void
+  createDiagram: (name: string, nodes: AppNode[], edges: AppEdge[]) => void
   switchDiagram: (id: string) => void
   duplicateDiagram: (id: string) => void
   deleteDiagram: (id: string) => void
@@ -233,7 +263,14 @@ export const useDiagramStore = create<DiagramState>()(
       },
 
       onNodesChange: (changes) => {
-        if (changes.some((c) => c.type === 'remove')) get().pushHistory()
+        const removeIds = changes.filter((c) => c.type === 'remove').map((c) => c.id)
+        if (removeIds.length) {
+          get().pushHistory()
+          const others = changes.filter((c) => c.type !== 'remove')
+          const applied = others.length ? applyNodeChanges(others, get().nodes) : get().nodes
+          set({ nodes: dropNodes(applied, new Set(removeIds)) })
+          return
+        }
         set({ nodes: applyNodeChanges(changes, get().nodes) })
       },
 
@@ -338,7 +375,7 @@ export const useDiagramStore = create<DiagramState>()(
         const node = get().nodes.find((n) => n.id === id)
         get().pushHistory()
         set({
-          nodes: get().nodes.filter((n) => n.id !== id),
+          nodes: dropNodes(get().nodes, new Set([id])),
           edges: get().edges.filter((e) => e.source !== id && e.target !== id),
           selectedNodeId: null,
           selectedNodeIds: [],
@@ -351,7 +388,7 @@ export const useDiagramStore = create<DiagramState>()(
         const set_ = new Set(ids)
         get().pushHistory()
         set({
-          nodes: get().nodes.filter((n) => !set_.has(n.id)),
+          nodes: dropNodes(get().nodes, set_),
           edges: get().edges.filter((e) => !set_.has(e.source) && !set_.has(e.target)),
           selectedNodeId: null,
           selectedNodeIds: [],
@@ -465,6 +502,61 @@ export const useDiagramStore = create<DiagramState>()(
         })
       },
 
+      // --- Clipboard & selection ---
+      copySelection: (ids) => {
+        const set_ = new Set(ids)
+        const nodes = get().nodes.filter((n) => set_.has(n.id))
+        if (nodes.length === 0) return
+        const edges = get().edges.filter((e) => set_.has(e.source) && set_.has(e.target))
+        clipboard = {
+          nodes: nodes.map((n) => ({ ...n, data: { ...n.data } })),
+          edges: edges.map((e) => ({ ...e })),
+        }
+        emit('info', `Copiati ${nodes.length} componenti`)
+      },
+
+      paste: () => {
+        if (!clipboard || clipboard.nodes.length === 0) return
+        get().pushHistory()
+        const idMap = new Map(clipboard.nodes.map((n) => [n.id, uid()]))
+        const pasted: AppNode[] = clipboard.nodes.map((n) => {
+          const keepsParent = !!n.parentId && idMap.has(n.parentId)
+          return {
+            ...n,
+            id: idMap.get(n.id)!,
+            position: { x: n.position.x + 40, y: n.position.y + 40 },
+            selected: true,
+            data: { ...n.data },
+            parentId: keepsParent ? idMap.get(n.parentId!) : undefined,
+            extent: keepsParent ? n.extent : undefined,
+          }
+        })
+        const pastedEdges: AppEdge[] = clipboard.edges.map((e) => ({
+          ...e,
+          id: uid(),
+          source: idMap.get(e.source)!,
+          target: idMap.get(e.target)!,
+        }))
+        set({
+          nodes: [...get().nodes.map((n) => ({ ...n, selected: false })), ...pasted],
+          edges: [...get().edges, ...pastedEdges],
+          selectedNodeIds: pasted.map((n) => n.id),
+          selectedNodeId: pasted.length === 1 ? pasted[0].id : null,
+          selectedEdgeId: null,
+        })
+        emit('success', `Incollati ${pasted.length} componenti`)
+      },
+
+      selectAll: () => {
+        const ids = get().nodes.map((n) => n.id)
+        set({
+          nodes: get().nodes.map((n) => ({ ...n, selected: true })),
+          selectedNodeIds: ids,
+          selectedNodeId: ids.length === 1 ? ids[0] : null,
+          selectedEdgeId: null,
+        })
+      },
+
       deleteEdge: (id) => {
         get().pushHistory()
         set({
@@ -534,6 +626,27 @@ export const useDiagramStore = create<DiagramState>()(
             [diagramId]: { id: diagramId, name, nodes, edges, updatedAt: Date.now() },
           },
         })
+      },
+
+      createDiagram: (name, nodes, edges) => {
+        get()._commitActive()
+        const id = uid()
+        set({
+          diagramId: id,
+          name,
+          nodes,
+          edges,
+          selectedNodeId: null,
+          selectedEdgeId: null,
+          selectedNodeIds: [],
+          _past: [],
+          _future: [],
+          diagrams: {
+            ...get().diagrams,
+            [id]: { id, name, nodes, edges, updatedAt: Date.now() },
+          },
+        })
+        emit('success', `Creato: ${name}`)
       },
 
       switchDiagram: (id) => {
