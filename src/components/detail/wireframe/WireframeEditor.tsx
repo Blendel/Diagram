@@ -19,7 +19,7 @@ import {
   type Edge,
   type OnSelectionChangeParams,
 } from '@xyflow/react'
-import { Trash2, Pencil, Play } from 'lucide-react'
+import { Trash2, Pencil, Play, BringToFront, SendToBack, CopyPlus } from 'lucide-react'
 import type { UiNode, UiKind, UiNodeData } from '../../../types/diagram'
 import { UI_CATALOG, UI_ORDER } from '../../../lib/uiCatalog'
 import { uid } from '../../../lib/uid'
@@ -150,6 +150,51 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
     setNodes((ns) => ns.filter((n) => n.id !== sel))
     setSel(null)
   }
+  const bringForward = () =>
+    setNodes((ns) => {
+      const i = ns.findIndex((n) => n.id === sel)
+      if (i < 0 || i === ns.length - 1) return ns
+      const copy = [...ns]
+      const [x] = copy.splice(i, 1)
+      copy.push(x)
+      return copy
+    })
+  const sendBackward = () =>
+    setNodes((ns) => {
+      const i = ns.findIndex((n) => n.id === sel)
+      if (i <= 0) return ns
+      const copy = [...ns]
+      const [x] = copy.splice(i, 1)
+      copy.unshift(x)
+      return copy
+    })
+  const duplicateEl = () => {
+    const n = nodes.find((x) => x.id === sel)
+    if (!n) return
+    const clone: UiNode = {
+      ...n,
+      id: uid('ui'),
+      position: { x: n.position.x + 16, y: n.position.y + 16 },
+      selected: false,
+      data: { ...n.data },
+    }
+    setNodes((ns) => [...ns, clone])
+    setSel(clone.id)
+  }
+
+  // Ctrl/Cmd+D duplicates the selected element (edit mode only).
+  useEffect(() => {
+    if (mode !== 'edit') return
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && sel) {
+        e.preventDefault()
+        duplicateEl()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, sel, nodes])
 
   const frames = nodes.filter((n) => n.data.kind === 'frame')
 
@@ -246,6 +291,9 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
                 frames={frames}
                 patch={patch}
                 setDevice={setDevice}
+                onForward={bringForward}
+                onBackward={sendBackward}
+                onDuplicate={duplicateEl}
                 onDelete={del}
               />
             ) : (
@@ -313,12 +361,18 @@ function ElementInspector({
   frames,
   patch,
   setDevice,
+  onForward,
+  onBackward,
+  onDuplicate,
   onDelete,
 }: {
   node: UiNode
   frames: UiNode[]
   patch: (p: Partial<UiNodeData>) => void
   setDevice: (w: number, h: number) => void
+  onForward: () => void
+  onBackward: () => void
+  onDuplicate: () => void
   onDelete: () => void
 }) {
   const d = node.data
@@ -436,6 +490,32 @@ function ElementInspector({
           </select>
         </Field>
       )}
+
+      <Field label="Ordine & azioni">
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            onClick={onBackward}
+            title="Porta indietro"
+          >
+            <SendToBack size={14} /> Indietro
+          </button>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            onClick={onForward}
+            title="Porta avanti"
+          >
+            <BringToFront size={14} /> Avanti
+          </button>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            onClick={onDuplicate}
+            title="Duplica (Ctrl+D)"
+          >
+            <CopyPlus size={14} /> Duplica
+          </button>
+        </div>
+      </Field>
 
       <p className="text-[11px] text-slate-400 mb-3">
         Ridimensiona trascinando i bordi quando l'elemento è selezionato.
