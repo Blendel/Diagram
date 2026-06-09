@@ -7,6 +7,7 @@ export type NodeKind =
   | 'database'
   | 'storage'
   | 'queue'
+  | 'stream'
   | 'gateway'
   | 'loadbalancer'
   | 'cdn'
@@ -14,7 +15,12 @@ export type NodeKind =
   | 'client'
   | 'scheduler'
   | 'monitoring'
+  | 'firewall'
+  | 'dns'
+  | 'auth'
+  | 'secrets'
   | 'external'
+  | 'custom'
   | 'group'
 
 /** Live/operational status shown as a colored indicator on the node. */
@@ -40,6 +46,13 @@ export type SubNodeKind =
   | 'variable'
   | 'class'
   | 'note'
+  // clean / hexagonal architecture building blocks
+  | 'controller'
+  | 'usecase'
+  | 'repository'
+  | 'port'
+  | 'adapter'
+  | 'dto'
   // database-flavored objects
   | 'procedure'
   | 'view'
@@ -68,19 +81,33 @@ export interface ComponentChildren {
 export type UiKind =
   | 'frame'
   | 'navbar'
+  | 'sidebar'
+  | 'footer'
   | 'heading'
   | 'text'
   | 'button'
   | 'input'
-  | 'image'
-  | 'card'
-  | 'list'
-  | 'divider'
-  | 'avatar'
-  | 'badge'
-  | 'tabs'
+  | 'textarea'
+  | 'select'
+  | 'radio'
   | 'checkbox'
   | 'toggle'
+  | 'slider'
+  | 'image'
+  | 'icon'
+  | 'card'
+  | 'list'
+  | 'table'
+  | 'chart'
+  | 'progress'
+  | 'breadcrumb'
+  | 'pagination'
+  | 'tabs'
+  | 'avatar'
+  | 'badge'
+  | 'container'
+  | 'modal'
+  | 'divider'
 
 export interface UiNodeData {
   kind: UiKind
@@ -89,10 +116,16 @@ export interface UiNodeData {
   link?: string
 
   // --- editable characteristics (per element kind) ---
-  /** navbar menu items / list rows / number of tabs */
+  /** navbar/sidebar items, list/table rows, radio/tabs options, pagination pages */
   count?: number
+  /** table columns */
+  cols?: number
   /** text & card body skeleton lines */
   lines?: number
+  /** fill level 0-100 (progress) or default value (slider) */
+  percent?: number
+  /** accent color override (hex) */
+  color?: string
   /** button / badge visual style */
   variant?: 'solid' | 'soft' | 'outline'
   /** heading font size */
@@ -128,6 +161,8 @@ export interface DbColumn {
   pk?: boolean
   fk?: boolean
   nullable?: boolean
+  unique?: boolean
+  default?: string
 }
 
 export interface DbTable {
@@ -138,6 +173,8 @@ export interface DbTable {
   columns: DbColumn[]
 }
 
+export type DbReferentialAction = 'cascade' | 'restrict' | 'set null' | 'no action'
+
 export interface DbRelation {
   id: string
   source: string
@@ -145,6 +182,9 @@ export interface DbRelation {
   sourceColumn?: string
   targetColumn?: string
   cardinality: '1-1' | '1-n' | 'n-n'
+  name?: string
+  onDelete?: DbReferentialAction
+  onUpdate?: DbReferentialAction
 }
 
 /**

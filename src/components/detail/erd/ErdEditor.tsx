@@ -33,6 +33,9 @@ type RelData = {
   sourceColumn?: string
   targetColumn?: string
   cardinality: DbRelation['cardinality']
+  name?: string
+  onDelete?: DbRelation['onDelete']
+  onUpdate?: DbRelation['onUpdate']
 }
 type ErdEdge = Edge<RelData>
 
@@ -112,10 +115,17 @@ const toEdge = (r: DbRelation): ErdEdge => ({
   source: r.source,
   target: r.target,
   type: 'smoothstep',
-  label: r.cardinality,
+  label: r.name || r.cardinality,
   markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
   style: { stroke: '#94a3b8' },
-  data: { sourceColumn: r.sourceColumn, targetColumn: r.targetColumn, cardinality: r.cardinality },
+  data: {
+    sourceColumn: r.sourceColumn,
+    targetColumn: r.targetColumn,
+    cardinality: r.cardinality,
+    name: r.name,
+    onDelete: r.onDelete,
+    onUpdate: r.onUpdate,
+  },
 })
 
 function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps) {
@@ -140,6 +150,9 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
       sourceColumn: e.data?.sourceColumn,
       targetColumn: e.data?.targetColumn,
       cardinality: e.data?.cardinality ?? '1-n',
+      name: e.data?.name,
+      onDelete: e.data?.onDelete,
+      onUpdate: e.data?.onUpdate,
     }))
     onChangeRef.current(tables, relations)
   }
@@ -214,6 +227,9 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
         sourceColumn: selectedEdge.data?.sourceColumn,
         targetColumn: selectedEdge.data?.targetColumn,
         cardinality: selectedEdge.data?.cardinality ?? '1-n',
+        name: selectedEdge.data?.name,
+        onDelete: selectedEdge.data?.onDelete,
+        onUpdate: selectedEdge.data?.onUpdate,
       }
     : null
   const tableById = (id: string) => nodes.find((n) => n.id === id)?.data.table
@@ -282,7 +298,8 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
                     ? {
                         ...e,
                         data: { ...e.data, ...p } as RelData,
-                        label: (p.cardinality ?? e.data?.cardinality) as string,
+                        label: ((p.name ?? e.data?.name) ||
+                          (p.cardinality ?? e.data?.cardinality)) as string,
                       }
                     : e,
                 ),
@@ -352,12 +369,20 @@ function TablePanel({
                 <Trash2 size={14} />
               </button>
             </div>
-            <input
-              className={`${inputCls} mt-1.5`}
-              placeholder="tipo (es. uuid, text, int)"
-              value={c.type}
-              onChange={(e) => onPatchColumn(c.id, { type: e.target.value })}
-            />
+            <div className="flex gap-1.5 mt-1.5">
+              <input
+                className={`${inputCls} flex-1`}
+                placeholder="tipo (es. uuid, text, int)"
+                value={c.type}
+                onChange={(e) => onPatchColumn(c.id, { type: e.target.value })}
+              />
+              <input
+                className={`${inputCls} w-24`}
+                placeholder="default"
+                value={c.default ?? ''}
+                onChange={(e) => onPatchColumn(c.id, { default: e.target.value })}
+              />
+            </div>
             <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               <label className="inline-flex items-center gap-1 cursor-pointer">
                 <input type="checkbox" checked={!!c.pk} onChange={(e) => onPatchColumn(c.id, { pk: e.target.checked })} />
@@ -366,6 +391,10 @@ function TablePanel({
               <label className="inline-flex items-center gap-1 cursor-pointer">
                 <input type="checkbox" checked={!!c.fk} onChange={(e) => onPatchColumn(c.id, { fk: e.target.checked })} />
                 FK
+              </label>
+              <label className="inline-flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" checked={!!c.unique} onChange={(e) => onPatchColumn(c.id, { unique: e.target.checked })} />
+                UQ
               </label>
               <label className="inline-flex items-center gap-1 cursor-pointer">
                 <input type="checkbox" checked={!!c.nullable} onChange={(e) => onPatchColumn(c.id, { nullable: e.target.checked })} />
@@ -402,6 +431,16 @@ function RelationPanel({
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
         <b>{source?.name ?? '?'}</b> → <b>{target?.name ?? '?'}</b>
       </p>
+
+      <label className="block mb-3">
+        <span className="block text-[11px] font-medium text-slate-500 mb-1">Nome relazione</span>
+        <input
+          className={inputCls}
+          placeholder="es. fk_orders_customer"
+          value={relation.name ?? ''}
+          onChange={(e) => onPatch({ name: e.target.value })}
+        />
+      </label>
 
       <label className="block mb-3">
         <span className="block text-[11px] font-medium text-slate-500 mb-1">Colonna sorgente</span>
@@ -447,6 +486,35 @@ function RelationPanel({
           <option value="n-n">Molti a molti (n-n)</option>
         </select>
       </label>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block mb-3">
+          <span className="block text-[11px] font-medium text-slate-500 mb-1">ON DELETE</span>
+          <select
+            className={inputCls}
+            value={relation.onDelete ?? 'no action'}
+            onChange={(e) => onPatch({ onDelete: e.target.value as DbRelation['onDelete'] })}
+          >
+            <option value="no action">No action</option>
+            <option value="cascade">Cascade</option>
+            <option value="restrict">Restrict</option>
+            <option value="set null">Set null</option>
+          </select>
+        </label>
+        <label className="block mb-3">
+          <span className="block text-[11px] font-medium text-slate-500 mb-1">ON UPDATE</span>
+          <select
+            className={inputCls}
+            value={relation.onUpdate ?? 'no action'}
+            onChange={(e) => onPatch({ onUpdate: e.target.value as DbRelation['onUpdate'] })}
+          >
+            <option value="no action">No action</option>
+            <option value="cascade">Cascade</option>
+            <option value="restrict">Restrict</option>
+            <option value="set null">Set null</option>
+          </select>
+        </label>
+      </div>
 
       <button className={dangerBtnCls} onClick={onDelete}>
         <Trash2 size={15} /> Elimina relazione

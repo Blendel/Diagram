@@ -1,5 +1,21 @@
 import type { ComponentType } from 'react'
-import { Workflow, Globe, Boxes, Variable, Braces, StickyNote, Settings, Eye, Zap } from 'lucide-react'
+import {
+  Workflow,
+  Globe,
+  Boxes,
+  Variable,
+  Braces,
+  StickyNote,
+  Settings,
+  Eye,
+  Zap,
+  Webhook,
+  Target,
+  Package,
+  Plug,
+  Cable,
+  Brackets,
+} from 'lucide-react'
 import type { SubNodeKind } from '../types/diagram'
 
 export type IconComponent = ComponentType<{
@@ -81,15 +97,63 @@ export const SUB_CATALOG: Record<SubNodeKind, SubKindMeta> = {
     accent: '#e11d48',
     description: 'Trigger su evento tabella',
   },
+  controller: {
+    kind: 'controller',
+    label: 'Controller',
+    icon: Webhook,
+    accent: '#0d9488',
+    description: 'Adattatore in ingresso (HTTP/RPC)',
+  },
+  usecase: {
+    kind: 'usecase',
+    label: 'Use case',
+    icon: Target,
+    accent: '#2563eb',
+    description: 'Logica applicativa / servizio',
+  },
+  repository: {
+    kind: 'repository',
+    label: 'Repository',
+    icon: Package,
+    accent: '#d97706',
+    description: 'Accesso ai dati (porta in uscita)',
+  },
+  port: {
+    kind: 'port',
+    label: 'Port',
+    icon: Plug,
+    accent: '#7c3aed',
+    description: 'Interfaccia (porta) del dominio',
+  },
+  adapter: {
+    kind: 'adapter',
+    label: 'Adapter',
+    icon: Cable,
+    accent: '#0891b2',
+    description: 'Implementazione di una porta',
+  },
+  dto: {
+    kind: 'dto',
+    label: 'DTO / Model',
+    icon: Brackets,
+    accent: '#db2777',
+    description: 'Oggetto dati / modello',
+  },
 }
 
 /** Palette for service / generic component internals. */
 export const SUB_ORDER: SubNodeKind[] = [
+  'controller',
+  'usecase',
+  'repository',
+  'port',
+  'adapter',
   'function',
   'endpoint',
   'module',
-  'variable',
   'class',
+  'dto',
+  'variable',
   'note',
 ]
 

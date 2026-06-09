@@ -24,11 +24,16 @@ import type { UiNode, UiKind, UiNodeData } from '../../../types/diagram'
 import { UI_CATALOG, UI_ORDER } from '../../../lib/uiCatalog'
 import { uid } from '../../../lib/uid'
 import { inputCls, dangerBtnCls } from '../../../lib/ui'
+import { getHelperLines } from '../../../lib/helperLines'
 import { WireframeNode } from './WireframeNode'
 import { WireframePreview } from './WireframePreview'
+import { HelperLines } from '../../canvas/HelperLines'
 
 const nodeTypes: NodeTypes = { ui: WireframeNode }
 const UI_DND = 'application/architect-ui'
+
+/** In-memory clipboard for copy/paste inside the wireframe editor. */
+let wireClipboard: UiNode[] = []
 
 const DEVICES: Record<string, [number, number]> = {
   phone: [360, 640],
@@ -73,6 +78,20 @@ function defaults(kind: UiKind): Partial<UiNodeData> {
       return { size: 'lg' }
     case 'input':
       return { inputType: 'text' }
+    case 'sidebar':
+      return { count: 5 }
+    case 'radio':
+      return { count: 3, tab: 0 }
+    case 'table':
+      return { count: 3, cols: 3 }
+    case 'slider':
+      return { percent: 50 }
+    case 'progress':
+      return { percent: 60 }
+    case 'breadcrumb':
+      return { count: 3 }
+    case 'pagination':
+      return { count: 5 }
     default:
       return {}
   }
@@ -94,6 +113,8 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
   const [edges] = useState<Edge[]>(initialEdges)
   const [sel, setSel] = useState<string | null>(null)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
+  const [helperH, setHelperH] = useState<number | undefined>(undefined)
+  const [helperV, setHelperV] = useState<number | undefined>(undefined)
   const { screenToFlowPosition } = useReactFlow()
 
   const onChangeRef = useRef(onChange)
@@ -112,8 +133,21 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
   useEffect(() => () => onChangeRef.current(latest.current.nodes, latest.current.edges), [])
 
   const onNodesChange = useCallback(
-    (ch: NodeChange<UiNode>[]) => setNodes((ns) => applyNodeChanges(ch, ns)),
-    [],
+    (ch: NodeChange<UiNode>[]) => {
+      const only = ch.length === 1 ? ch[0] : null
+      if (only && only.type === 'position' && only.dragging && only.position) {
+        const lines = getHelperLines(only, nodes)
+        if (lines.snapPosition.x !== undefined) only.position.x = lines.snapPosition.x
+        if (lines.snapPosition.y !== undefined) only.position.y = lines.snapPosition.y
+        setHelperH(lines.horizontal)
+        setHelperV(lines.vertical)
+      } else if (helperH !== undefined || helperV !== undefined) {
+        setHelperH(undefined)
+        setHelperV(undefined)
+      }
+      setNodes((ns) => applyNodeChanges(ch, ns))
+    },
+    [nodes, helperH, helperV],
   )
   const onSelectionChange = useCallback(
     ({ nodes: n }: OnSelectionChangeParams) => setSel(n[0]?.id ?? null),
@@ -182,13 +216,32 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
     setSel(clone.id)
   }
 
-  // Ctrl/Cmd+D duplicates the selected element (edit mode only).
+  // Edit-mode shortcuts: duplicate (Ctrl+D), copy/paste (Ctrl+C / Ctrl+V).
   useEffect(() => {
     if (mode !== 'edit') return
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && sel) {
+      if (!(e.ctrlKey || e.metaKey)) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const k = e.key.toLowerCase()
+      if (k === 'd' && sel) {
         e.preventDefault()
         duplicateEl()
+      } else if (k === 'c' && sel) {
+        e.preventDefault()
+        const n = nodes.find((x) => x.id === sel)
+        if (n) wireClipboard = [{ ...n, data: { ...n.data } }]
+      } else if (k === 'v' && wireClipboard.length) {
+        e.preventDefault()
+        const clones = wireClipboard.map((n) => ({
+          ...n,
+          id: uid('ui'),
+          position: { x: n.position.x + 16, y: n.position.y + 16 },
+          selected: false,
+          data: { ...n.data },
+        }))
+        setNodes((ns) => [...ns, ...clones])
+        setSel(clones[clones.length - 1]?.id ?? null)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -272,13 +325,12 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
               elementsSelectable
               elevateNodesOnSelect={false}
               deleteKeyCode={['Backspace', 'Delete']}
-              snapToGrid
-              snapGrid={[8, 8]}
               minZoom={0.3}
               maxZoom={2}
               fitView
             >
               <Background variant={BackgroundVariant.Lines} gap={24} size={1} color="var(--dot)" />
+              <HelperLines horizontal={helperH} vertical={helperV} />
               <Controls showInteractive={false} />
             </ReactFlow>
           </div>
@@ -387,6 +439,23 @@ function ElementInspector({
         <input className={inputCls} value={d.label} onChange={(e) => patch({ label: e.target.value })} />
       </Field>
 
+      <Field label="Colore">
+        <div className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={d.color || meta.accent}
+            onChange={(e) => patch({ color: e.target.value })}
+            className="h-9 w-12 rounded-md border border-slate-200 dark:border-slate-700 bg-transparent cursor-pointer p-0.5"
+          />
+          <button
+            className="inline-flex items-center px-2.5 h-9 rounded-md border border-slate-200 dark:border-slate-700 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+            onClick={() => patch({ color: undefined })}
+          >
+            Default
+          </button>
+        </div>
+      </Field>
+
       {d.kind === 'frame' && (
         <Field label="Dispositivo">
           <div className="flex gap-1.5">
@@ -470,6 +539,44 @@ function ElementInspector({
 
       {d.kind === 'toggle' && (
         <Check label="Attivo di default" checked={!!d.on} onChange={(v) => patch({ on: v })} />
+      )}
+
+      {d.kind === 'sidebar' && (
+        <NumberField label="Voci" value={d.count ?? 5} min={1} max={10} onChange={(v) => patch({ count: v })} />
+      )}
+
+      {d.kind === 'radio' && (
+        <>
+          <NumberField label="Opzioni" value={d.count ?? 3} min={1} max={8} onChange={(v) => patch({ count: v })} />
+          <NumberField label="Selezionata (default)" value={d.tab ?? 0} min={0} max={(d.count ?? 3) - 1} onChange={(v) => patch({ tab: v })} />
+        </>
+      )}
+
+      {d.kind === 'table' && (
+        <>
+          <NumberField label="Righe" value={d.count ?? 3} min={1} max={8} onChange={(v) => patch({ count: v })} />
+          <NumberField label="Colonne" value={d.cols ?? 3} min={1} max={6} onChange={(v) => patch({ cols: v })} />
+        </>
+      )}
+
+      {(d.kind === 'slider' || d.kind === 'progress') && (
+        <NumberField
+          label={d.kind === 'slider' ? 'Valore (default)' : 'Riempimento %'}
+          value={d.percent ?? (d.kind === 'slider' ? 50 : 60)}
+          min={0}
+          max={100}
+          onChange={(v) => patch({ percent: v })}
+        />
+      )}
+
+      {(d.kind === 'breadcrumb' || d.kind === 'pagination') && (
+        <NumberField
+          label={d.kind === 'breadcrumb' ? 'Livelli' : 'Pagine'}
+          value={d.count ?? (d.kind === 'breadcrumb' ? 3 : 5)}
+          min={1}
+          max={9}
+          onChange={(v) => patch({ count: v })}
+        />
       )}
 
       {/* Navigation link for interactive elements */}

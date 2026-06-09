@@ -1,5 +1,12 @@
 import type { NodePositionChange } from '@xyflow/react'
-import type { AppNode } from '../types/diagram'
+
+/** Minimal node shape needed for alignment guides (works for any React Flow node). */
+export interface LineNode {
+  id: string
+  position: { x: number; y: number }
+  measured?: { width?: number; height?: number }
+  parentId?: string
+}
 
 export interface HelperLineResult {
   horizontal?: number
@@ -14,7 +21,7 @@ export interface HelperLineResult {
  */
 export function getHelperLines(
   change: NodePositionChange,
-  nodes: AppNode[],
+  nodes: readonly LineNode[],
   distance = 5,
 ): HelperLineResult {
   const result: HelperLineResult = { snapPosition: {} }
