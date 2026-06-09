@@ -5,6 +5,7 @@ import { useUiStore } from '../../store/useUiStore'
 import { NODE_CATALOG, STATUS_META, STATUS_ORDER } from '../../lib/nodeCatalog'
 import { PROTOCOL_META, PROTOCOL_ORDER, SYNC_META } from '../../lib/edgeCatalog'
 import { SHAPE_LABEL, SHAPE_ORDER } from '../../lib/shapes'
+import { GROUP_VARIANTS, GROUP_ORDER } from '../../lib/groupCatalog'
 import { PRESET_COLORS } from '../../lib/colors'
 import { inputCls, primaryBtnCls, dangerBtnCls } from '../../lib/ui'
 import { MetricSliders } from '../detail/MetricSliders'
@@ -110,6 +111,24 @@ function NodeInspector({ node }: { node: AppNode }) {
           </button>
         </div>
       </Field>
+
+      {isGroup && (
+        <Field label="Tipo di gruppo">
+          <select
+            className={inputCls}
+            value={node.data.groupType ?? 'generic'}
+            onChange={(e) =>
+              update(node.id, { groupType: e.target.value as AppNode['data']['groupType'] })
+            }
+          >
+            {GROUP_ORDER.map((g) => (
+              <option key={g} value={g}>
+                {GROUP_VARIANTS[g].label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       {!isGroup && (
         <>

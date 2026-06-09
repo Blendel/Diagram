@@ -26,6 +26,17 @@ export type NodeKind =
 /** Live/operational status shown as a colored indicator on the node. */
 export type NodeStatus = 'healthy' | 'degraded' | 'down' | 'unknown'
 
+/** Typed boundary variant for group nodes. */
+export type GroupVariant =
+  | 'generic'
+  | 'region'
+  | 'zone'
+  | 'vpc'
+  | 'subnet'
+  | 'cluster'
+  | 'namespace'
+  | 'pod'
+
 /** Geometric shape of a component node. */
 export type NodeShape =
   | 'rounded'
@@ -204,6 +215,8 @@ export interface DiagramNodeData {
   /** Visual customization */
   shape?: NodeShape
   color?: string
+  /** Boundary variant (group nodes only). */
+  groupType?: GroupVariant
 
   /** Dynamic load metric, 0-100. Drives the derived status and edge speed. */
   load?: number
