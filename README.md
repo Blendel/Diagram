@@ -32,10 +32,18 @@ npm run preview  # anteprima della build
 - **Dark mode**, **undo/redo**, context menu, status bar con log eventi
 - **Import/Export JSON** + **export PNG/SVG** + salvataggio automatico in IndexedDB
 
-## Esempio
+## Esempi
 
-Importa [examples/demo-shopsphere.json](examples/demo-shopsphere.json) (Toolbar → Importa)
-per una demo completa, oppure rigenerala con `node scripts/gen-example.mjs`.
+Importa uno dei diagrammi in [examples/](examples/) (Toolbar → Importa, oppure
+trascina il `.json` nell'app):
+
+- **demo-shopsphere.json** — demo completa che usa tutte le funzionalità
+- **saas-starter.json** — SaaS moderno (ERD, drill-down servizio, wireframe)
+- **iot-platform.json** — IoT/edge, MQTT, stream processing, telemetria NoSQL
+- **streaming-media.json** — piattaforma streaming a microservizi
+- **banking-cqrs.json** — core banking CQRS/event-sourcing con sicurezza
+
+Rigenerabili con `node scripts/gen-example.mjs` e `node scripts/gen-examples.mjs`.
 
 ## Struttura
 

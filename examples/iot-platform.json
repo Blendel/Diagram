@@ -1,0 +1,456 @@
+{
+  "schema": "architect-diagram",
+  "version": 3,
+  "diagram": {
+    "id": "iot-platform",
+    "name": "IoT Platform",
+    "nodes": [
+      {
+        "id": "g-field",
+        "type": "group",
+        "position": {
+          "x": 20,
+          "y": 60
+        },
+        "style": {
+          "width": 300,
+          "height": 360
+        },
+        "data": {
+          "kind": "group",
+          "label": "Campo / Edge",
+          "status": "unknown",
+          "groupType": "zone"
+        }
+      },
+      {
+        "id": "g-ingest",
+        "type": "group",
+        "position": {
+          "x": 360,
+          "y": 60
+        },
+        "style": {
+          "width": 380,
+          "height": 360
+        },
+        "data": {
+          "kind": "group",
+          "label": "Ingestione",
+          "status": "unknown",
+          "groupType": "cluster"
+        }
+      },
+      {
+        "id": "g-data",
+        "type": "group",
+        "position": {
+          "x": 780,
+          "y": 60
+        },
+        "style": {
+          "width": 420,
+          "height": 420
+        },
+        "data": {
+          "kind": "group",
+          "label": "Dati & Analisi",
+          "status": "unknown",
+          "groupType": "vpc"
+        }
+      },
+      {
+        "id": "devices",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 120
+        },
+        "data": {
+          "kind": "client",
+          "label": "Device Fleet",
+          "status": "healthy",
+          "technology": "MCU/Sensors",
+          "load": 30
+        }
+      },
+      {
+        "id": "edge",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 300
+        },
+        "data": {
+          "kind": "gateway",
+          "label": "Edge Gateway",
+          "status": "healthy",
+          "technology": "Greengrass"
+        }
+      },
+      {
+        "id": "mqtt",
+        "type": "component",
+        "position": {
+          "x": 390,
+          "y": 110
+        },
+        "data": {
+          "kind": "queue",
+          "label": "MQTT Broker",
+          "status": "healthy",
+          "technology": "EMQX",
+          "load": 65
+        }
+      },
+      {
+        "id": "stream",
+        "type": "component",
+        "position": {
+          "x": 560,
+          "y": 110
+        },
+        "data": {
+          "kind": "stream",
+          "label": "Rules / Stream",
+          "status": "healthy",
+          "technology": "Flink",
+          "load": 70
+        }
+      },
+      {
+        "id": "fn",
+        "type": "component",
+        "position": {
+          "x": 390,
+          "y": 300
+        },
+        "data": {
+          "kind": "serverless",
+          "label": "Alert Fn",
+          "status": "healthy",
+          "technology": "Lambda"
+        }
+      },
+      {
+        "id": "tsdb",
+        "type": "component",
+        "position": {
+          "x": 800,
+          "y": 110
+        },
+        "data": {
+          "kind": "database",
+          "label": "TimescaleDB",
+          "status": "healthy",
+          "technology": "TimescaleDB",
+          "load": 55
+        }
+      },
+      {
+        "id": "teldb",
+        "type": "component",
+        "position": {
+          "x": 800,
+          "y": 300
+        },
+        "data": {
+          "kind": "database",
+          "label": "Telemetry Store",
+          "status": "healthy",
+          "technology": "MongoDB",
+          "load": 40,
+          "dbMode": "document",
+          "collections": [
+            {
+              "id": "c-dev",
+              "name": "devices",
+              "x": 60,
+              "y": 60,
+              "fields": [
+                {
+                  "id": "d-id",
+                  "name": "_id",
+                  "type": "ObjectId"
+                },
+                {
+                  "id": "d-serial",
+                  "name": "serial",
+                  "type": "string"
+                },
+                {
+                  "id": "d-meta",
+                  "name": "metadata",
+                  "type": "object",
+                  "embedded": true
+                },
+                {
+                  "id": "d-tags",
+                  "name": "tags",
+                  "type": "string",
+                  "array": true
+                }
+              ]
+            },
+            {
+              "id": "c-read",
+              "name": "readings",
+              "x": 460,
+              "y": 60,
+              "fields": [
+                {
+                  "id": "r-id",
+                  "name": "_id",
+                  "type": "ObjectId"
+                },
+                {
+                  "id": "r-dev",
+                  "name": "device_id",
+                  "type": "ObjectId"
+                },
+                {
+                  "id": "r-ts",
+                  "name": "ts",
+                  "type": "date"
+                },
+                {
+                  "id": "r-vals",
+                  "name": "values",
+                  "type": "object",
+                  "embedded": true
+                }
+              ]
+            }
+          ],
+          "references": [
+            {
+              "id": "tr1",
+              "source": "c-read",
+              "target": "c-dev",
+              "sourceField": "r-dev",
+              "name": "device"
+            }
+          ]
+        }
+      },
+      {
+        "id": "storage",
+        "type": "component",
+        "position": {
+          "x": 1020,
+          "y": 110
+        },
+        "data": {
+          "kind": "storage",
+          "label": "Cold Storage",
+          "status": "healthy",
+          "technology": "S3 Glacier"
+        }
+      },
+      {
+        "id": "dash",
+        "type": "component",
+        "position": {
+          "x": 1020,
+          "y": 300
+        },
+        "data": {
+          "kind": "client",
+          "label": "Dashboard",
+          "status": "healthy",
+          "technology": "Grafana",
+          "load": 15
+        }
+      },
+      {
+        "id": "mon",
+        "type": "component",
+        "position": {
+          "x": 560,
+          "y": 300
+        },
+        "data": {
+          "kind": "monitoring",
+          "label": "Monitoring",
+          "status": "healthy",
+          "technology": "Prometheus"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "type": "flow",
+        "source": "devices",
+        "target": "edge",
+        "sourceHandle": "b",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "tcp",
+          "sync": "async",
+          "label": "sensors"
+        }
+      },
+      {
+        "id": "e2",
+        "type": "flow",
+        "source": "edge",
+        "target": "mqtt",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "pubsub",
+          "label": "publish"
+        }
+      },
+      {
+        "id": "e3",
+        "type": "flow",
+        "source": "mqtt",
+        "target": "stream",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "flow",
+          "label": "subscribe"
+        }
+      },
+      {
+        "id": "e4",
+        "type": "flow",
+        "source": "stream",
+        "target": "tsdb",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync",
+          "animation": "pulse"
+        }
+      },
+      {
+        "id": "e5",
+        "type": "flow",
+        "source": "stream",
+        "target": "teldb",
+        "sourceHandle": "b",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e6",
+        "type": "flow",
+        "source": "stream",
+        "target": "fn",
+        "sourceHandle": "b",
+        "targetHandle": "r",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "label": "threshold"
+        }
+      },
+      {
+        "id": "e7",
+        "type": "flow",
+        "source": "tsdb",
+        "target": "storage",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "tcp",
+          "sync": "async",
+          "label": "archive"
+        }
+      },
+      {
+        "id": "e8",
+        "type": "flow",
+        "source": "dash",
+        "target": "tsdb",
+        "sourceHandle": "t",
+        "targetHandle": "b",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync",
+          "label": "query"
+        }
+      },
+      {
+        "id": "e9",
+        "type": "flow",
+        "source": "mon",
+        "target": "stream",
+        "sourceHandle": "t",
+        "targetHandle": "b",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "other",
+          "sync": "async",
+          "label": "scrape"
+        }
+      }
+    ],
+    "updatedAt": 1781020291436
+  }
+}

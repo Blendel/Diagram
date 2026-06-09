@@ -1,0 +1,679 @@
+{
+  "schema": "architect-diagram",
+  "version": 3,
+  "diagram": {
+    "id": "banking-cqrs",
+    "name": "Core Banking (CQRS)",
+    "nodes": [
+      {
+        "id": "g-edge",
+        "type": "group",
+        "position": {
+          "x": 20,
+          "y": 60
+        },
+        "style": {
+          "width": 280,
+          "height": 360
+        },
+        "data": {
+          "kind": "group",
+          "label": "Perimetro",
+          "status": "unknown",
+          "groupType": "region"
+        }
+      },
+      {
+        "id": "g-core",
+        "type": "group",
+        "position": {
+          "x": 340,
+          "y": 40
+        },
+        "style": {
+          "width": 460,
+          "height": 520
+        },
+        "data": {
+          "kind": "group",
+          "label": "Core Cluster",
+          "status": "unknown",
+          "groupType": "cluster"
+        }
+      },
+      {
+        "id": "g-data",
+        "type": "group",
+        "position": {
+          "x": 840,
+          "y": 60
+        },
+        "style": {
+          "width": 420,
+          "height": 360
+        },
+        "data": {
+          "kind": "group",
+          "label": "Dati",
+          "status": "unknown",
+          "groupType": "vpc"
+        }
+      },
+      {
+        "id": "web",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 120
+        },
+        "data": {
+          "kind": "client",
+          "label": "Home Banking",
+          "status": "healthy",
+          "technology": "Angular",
+          "load": 28
+        }
+      },
+      {
+        "id": "waf",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 300
+        },
+        "data": {
+          "kind": "firewall",
+          "label": "WAF",
+          "status": "healthy",
+          "technology": "F5"
+        }
+      },
+      {
+        "id": "gw",
+        "type": "component",
+        "position": {
+          "x": 200,
+          "y": 120
+        },
+        "data": {
+          "kind": "gateway",
+          "label": "API Gateway",
+          "status": "healthy",
+          "port": "443",
+          "load": 45
+        }
+      },
+      {
+        "id": "auth",
+        "type": "component",
+        "position": {
+          "x": 200,
+          "y": 300
+        },
+        "data": {
+          "kind": "auth",
+          "label": "IAM",
+          "status": "healthy",
+          "technology": "Keycloak"
+        }
+      },
+      {
+        "id": "cmd",
+        "type": "component",
+        "position": {
+          "x": 370,
+          "y": 80
+        },
+        "data": {
+          "kind": "service",
+          "label": "Command API",
+          "status": "healthy",
+          "load": 60
+        }
+      },
+      {
+        "id": "query",
+        "type": "component",
+        "position": {
+          "x": 370,
+          "y": 230
+        },
+        "data": {
+          "kind": "service",
+          "label": "Query API",
+          "status": "healthy",
+          "load": 40
+        }
+      },
+      {
+        "id": "proj",
+        "type": "component",
+        "position": {
+          "x": 600,
+          "y": 230
+        },
+        "data": {
+          "kind": "service",
+          "label": "Ledger Projector",
+          "status": "healthy",
+          "load": 50
+        }
+      },
+      {
+        "id": "fraud",
+        "type": "component",
+        "position": {
+          "x": 600,
+          "y": 380
+        },
+        "data": {
+          "kind": "stream",
+          "label": "Fraud Detection",
+          "status": "healthy",
+          "technology": "Flink",
+          "load": 72
+        }
+      },
+      {
+        "id": "vault",
+        "type": "component",
+        "position": {
+          "x": 370,
+          "y": 380
+        },
+        "data": {
+          "kind": "secrets",
+          "label": "Vault",
+          "status": "healthy",
+          "technology": "HashiCorp Vault"
+        }
+      },
+      {
+        "id": "es",
+        "type": "component",
+        "position": {
+          "x": 860,
+          "y": 110
+        },
+        "data": {
+          "kind": "database",
+          "label": "Event Store",
+          "status": "healthy",
+          "technology": "EventStoreDB",
+          "load": 55
+        }
+      },
+      {
+        "id": "bus",
+        "type": "component",
+        "position": {
+          "x": 860,
+          "y": 300
+        },
+        "data": {
+          "kind": "queue",
+          "label": "Event Bus",
+          "status": "healthy",
+          "technology": "Kafka",
+          "load": 60
+        }
+      },
+      {
+        "id": "readdb",
+        "type": "component",
+        "position": {
+          "x": 1080,
+          "y": 110
+        },
+        "data": {
+          "kind": "database",
+          "label": "Accounts (read)",
+          "status": "healthy",
+          "technology": "PostgreSQL",
+          "load": 48,
+          "dbMode": "relational",
+          "tables": [
+            {
+              "id": "t-acc",
+              "name": "accounts",
+              "x": 40,
+              "y": 40,
+              "columns": [
+                {
+                  "id": "a-id",
+                  "name": "id",
+                  "type": "uuid",
+                  "pk": true
+                },
+                {
+                  "id": "a-iban",
+                  "name": "iban",
+                  "type": "text",
+                  "unique": true
+                },
+                {
+                  "id": "a-owner",
+                  "name": "owner_id",
+                  "type": "uuid",
+                  "fk": true
+                },
+                {
+                  "id": "a-balance",
+                  "name": "balance",
+                  "type": "numeric",
+                  "default": "0"
+                }
+              ],
+              "indexes": [
+                {
+                  "id": "ix-iban",
+                  "name": "ix_accounts_iban",
+                  "columns": [
+                    "a-iban"
+                  ],
+                  "unique": true
+                }
+              ]
+            },
+            {
+              "id": "t-tx",
+              "name": "transactions",
+              "x": 380,
+              "y": 40,
+              "columns": [
+                {
+                  "id": "t-id",
+                  "name": "id",
+                  "type": "uuid",
+                  "pk": true
+                },
+                {
+                  "id": "t-from",
+                  "name": "from_account",
+                  "type": "uuid",
+                  "fk": true
+                },
+                {
+                  "id": "t-to",
+                  "name": "to_account",
+                  "type": "uuid",
+                  "fk": true
+                },
+                {
+                  "id": "t-amount",
+                  "name": "amount",
+                  "type": "numeric"
+                },
+                {
+                  "id": "t-ts",
+                  "name": "created_at",
+                  "type": "timestamptz",
+                  "default": "now()"
+                }
+              ],
+              "indexes": [
+                {
+                  "id": "ix-tx-from",
+                  "name": "ix_tx_from",
+                  "columns": [
+                    "t-from"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "t-owners",
+              "name": "owners",
+              "x": 40,
+              "y": 280,
+              "columns": [
+                {
+                  "id": "o-id",
+                  "name": "id",
+                  "type": "uuid",
+                  "pk": true
+                },
+                {
+                  "id": "o-name",
+                  "name": "name",
+                  "type": "text"
+                }
+              ],
+              "indexes": []
+            }
+          ],
+          "relations": [
+            {
+              "id": "r1",
+              "source": "t-acc",
+              "target": "t-owners",
+              "sourceColumn": "a-owner",
+              "targetColumn": "o-id",
+              "cardinality": "1-n",
+              "name": "fk_acc_owner"
+            },
+            {
+              "id": "r2",
+              "source": "t-tx",
+              "target": "t-acc",
+              "sourceColumn": "t-from",
+              "targetColumn": "a-id",
+              "cardinality": "1-n",
+              "name": "fk_tx_from",
+              "onDelete": "restrict"
+            },
+            {
+              "id": "r3",
+              "source": "t-tx",
+              "target": "t-acc",
+              "sourceColumn": "t-to",
+              "targetColumn": "a-id",
+              "cardinality": "1-n",
+              "name": "fk_tx_to",
+              "onDelete": "restrict"
+            }
+          ]
+        }
+      },
+      {
+        "id": "notify",
+        "type": "component",
+        "position": {
+          "x": 1080,
+          "y": 300
+        },
+        "data": {
+          "kind": "service",
+          "label": "Notifications",
+          "status": "healthy",
+          "technology": "Python"
+        }
+      },
+      {
+        "id": "mon",
+        "type": "component",
+        "position": {
+          "x": 600,
+          "y": 90
+        },
+        "data": {
+          "kind": "monitoring",
+          "label": "Monitoring",
+          "status": "healthy",
+          "technology": "Grafana"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "type": "flow",
+        "source": "web",
+        "target": "waf",
+        "sourceHandle": "b",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync",
+          "label": "HTTPS"
+        }
+      },
+      {
+        "id": "e2",
+        "type": "flow",
+        "source": "waf",
+        "target": "gw",
+        "sourceHandle": "r",
+        "targetHandle": "b",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e3",
+        "type": "flow",
+        "source": "gw",
+        "target": "auth",
+        "sourceHandle": "b",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "grpc",
+          "sync": "sync",
+          "bidirectional": true,
+          "sourceMult": "1",
+          "targetMult": "1"
+        }
+      },
+      {
+        "id": "e4",
+        "type": "flow",
+        "source": "gw",
+        "target": "cmd",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync",
+          "label": "command"
+        }
+      },
+      {
+        "id": "e5",
+        "type": "flow",
+        "source": "gw",
+        "target": "query",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync",
+          "label": "query"
+        }
+      },
+      {
+        "id": "e6",
+        "type": "flow",
+        "source": "cmd",
+        "target": "es",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync",
+          "label": "append",
+          "animation": "pulse"
+        }
+      },
+      {
+        "id": "e7",
+        "type": "flow",
+        "source": "cmd",
+        "target": "bus",
+        "sourceHandle": "b",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "pubsub",
+          "label": "events"
+        }
+      },
+      {
+        "id": "e8",
+        "type": "flow",
+        "source": "cmd",
+        "target": "vault",
+        "sourceHandle": "b",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "tcp",
+          "sync": "sync",
+          "label": "secrets"
+        }
+      },
+      {
+        "id": "e9",
+        "type": "flow",
+        "source": "bus",
+        "target": "proj",
+        "sourceHandle": "l",
+        "targetHandle": "b",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "flow"
+        }
+      },
+      {
+        "id": "e10",
+        "type": "flow",
+        "source": "proj",
+        "target": "readdb",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync",
+          "animation": "pulse"
+        }
+      },
+      {
+        "id": "e11",
+        "type": "flow",
+        "source": "query",
+        "target": "readdb",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e12",
+        "type": "flow",
+        "source": "bus",
+        "target": "fraud",
+        "sourceHandle": "l",
+        "targetHandle": "r",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "flow",
+          "label": "tx stream"
+        }
+      },
+      {
+        "id": "e13",
+        "type": "flow",
+        "source": "bus",
+        "target": "notify",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async"
+        }
+      },
+      {
+        "id": "e14",
+        "type": "flow",
+        "source": "mon",
+        "target": "cmd",
+        "sourceHandle": "l",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "other",
+          "sync": "async",
+          "label": "scrape"
+        }
+      }
+    ],
+    "updatedAt": 1781020291436
+  }
+}

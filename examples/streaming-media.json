@@ -1,0 +1,674 @@
+{
+  "schema": "architect-diagram",
+  "version": 3,
+  "diagram": {
+    "id": "streaming-media",
+    "name": "Streaming Platform",
+    "nodes": [
+      {
+        "id": "g-edge",
+        "type": "group",
+        "position": {
+          "x": 20,
+          "y": 60
+        },
+        "style": {
+          "width": 300,
+          "height": 460
+        },
+        "data": {
+          "kind": "group",
+          "label": "Edge",
+          "status": "unknown",
+          "groupType": "region"
+        }
+      },
+      {
+        "id": "g-core",
+        "type": "group",
+        "position": {
+          "x": 360,
+          "y": 40
+        },
+        "style": {
+          "width": 460,
+          "height": 560
+        },
+        "data": {
+          "kind": "group",
+          "label": "Microservizi",
+          "status": "unknown",
+          "groupType": "cluster"
+        }
+      },
+      {
+        "id": "g-data",
+        "type": "group",
+        "position": {
+          "x": 860,
+          "y": 60
+        },
+        "style": {
+          "width": 420,
+          "height": 460
+        },
+        "data": {
+          "kind": "group",
+          "label": "Dati",
+          "status": "unknown",
+          "groupType": "vpc"
+        }
+      },
+      {
+        "id": "tv",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 120
+        },
+        "data": {
+          "kind": "client",
+          "label": "Smart TV",
+          "status": "healthy",
+          "technology": "tvOS",
+          "load": 20
+        }
+      },
+      {
+        "id": "web",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 280
+        },
+        "data": {
+          "kind": "client",
+          "label": "Web",
+          "status": "healthy",
+          "technology": "React",
+          "load": 30
+        }
+      },
+      {
+        "id": "mobile",
+        "type": "component",
+        "position": {
+          "x": 50,
+          "y": 440
+        },
+        "data": {
+          "kind": "client",
+          "label": "Mobile",
+          "status": "healthy",
+          "technology": "Flutter",
+          "load": 25
+        }
+      },
+      {
+        "id": "cdn",
+        "type": "component",
+        "position": {
+          "x": 220,
+          "y": 120
+        },
+        "data": {
+          "kind": "cdn",
+          "label": "CDN",
+          "status": "healthy",
+          "technology": "Akamai",
+          "load": 60
+        }
+      },
+      {
+        "id": "lb",
+        "type": "component",
+        "position": {
+          "x": 220,
+          "y": 280
+        },
+        "data": {
+          "kind": "loadbalancer",
+          "label": "Load Balancer",
+          "status": "healthy"
+        }
+      },
+      {
+        "id": "gw",
+        "type": "component",
+        "position": {
+          "x": 220,
+          "y": 440
+        },
+        "data": {
+          "kind": "gateway",
+          "label": "API Gateway",
+          "status": "healthy",
+          "port": "443",
+          "load": 50
+        }
+      },
+      {
+        "id": "catalog",
+        "type": "component",
+        "position": {
+          "x": 390,
+          "y": 80
+        },
+        "data": {
+          "kind": "service",
+          "label": "Catalog",
+          "status": "healthy",
+          "load": 45
+        }
+      },
+      {
+        "id": "playback",
+        "type": "component",
+        "position": {
+          "x": 390,
+          "y": 220
+        },
+        "data": {
+          "kind": "service",
+          "label": "Playback",
+          "status": "degraded",
+          "load": 75
+        }
+      },
+      {
+        "id": "reco",
+        "type": "component",
+        "position": {
+          "x": 390,
+          "y": 360
+        },
+        "data": {
+          "kind": "service",
+          "label": "Recommendations",
+          "status": "healthy",
+          "load": 60,
+          "color": "#db2777",
+          "children": {
+            "nodes": [
+              {
+                "id": "rc-mod",
+                "type": "sub",
+                "position": {
+                  "x": 40,
+                  "y": 60
+                },
+                "data": {
+                  "kind": "module",
+                  "label": "FeatureStore",
+                  "signature": "",
+                  "description": ""
+                }
+              },
+              {
+                "id": "rc-fn",
+                "type": "sub",
+                "position": {
+                  "x": 320,
+                  "y": 60
+                },
+                "data": {
+                  "kind": "function",
+                  "label": "rankTitles",
+                  "signature": "(userId): Title[]",
+                  "description": "",
+                  "async": true
+                }
+              },
+              {
+                "id": "rc-ep",
+                "type": "sub",
+                "position": {
+                  "x": 320,
+                  "y": 200
+                },
+                "data": {
+                  "kind": "endpoint",
+                  "label": "GET /reco",
+                  "signature": "",
+                  "description": "",
+                  "method": "GET"
+                }
+              }
+            ],
+            "edges": [
+              {
+                "id": "rce1",
+                "source": "rc-mod",
+                "target": "rc-fn",
+                "type": "smoothstep"
+              },
+              {
+                "id": "rce2",
+                "source": "rc-fn",
+                "target": "rc-ep",
+                "type": "smoothstep"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "user",
+        "type": "component",
+        "position": {
+          "x": 390,
+          "y": 500
+        },
+        "data": {
+          "kind": "service",
+          "label": "User",
+          "status": "healthy",
+          "load": 35
+        }
+      },
+      {
+        "id": "catalogdb",
+        "type": "component",
+        "position": {
+          "x": 880,
+          "y": 110
+        },
+        "data": {
+          "kind": "database",
+          "label": "Catalog DB",
+          "status": "healthy",
+          "technology": "PostgreSQL"
+        }
+      },
+      {
+        "id": "userdb",
+        "type": "component",
+        "position": {
+          "x": 880,
+          "y": 290
+        },
+        "data": {
+          "kind": "database",
+          "label": "User DB",
+          "status": "healthy",
+          "technology": "PostgreSQL"
+        }
+      },
+      {
+        "id": "redis",
+        "type": "component",
+        "position": {
+          "x": 1100,
+          "y": 110
+        },
+        "data": {
+          "kind": "cache",
+          "label": "Redis",
+          "status": "healthy",
+          "technology": "Redis"
+        }
+      },
+      {
+        "id": "video",
+        "type": "component",
+        "position": {
+          "x": 1100,
+          "y": 290
+        },
+        "data": {
+          "kind": "storage",
+          "label": "Video Storage",
+          "status": "healthy",
+          "technology": "S3 + CloudFront"
+        }
+      },
+      {
+        "id": "kafka",
+        "type": "component",
+        "position": {
+          "x": 640,
+          "y": 620
+        },
+        "data": {
+          "kind": "queue",
+          "label": "Events",
+          "status": "healthy",
+          "technology": "Kafka",
+          "load": 55
+        }
+      },
+      {
+        "id": "analytics",
+        "type": "component",
+        "position": {
+          "x": 880,
+          "y": 470
+        },
+        "data": {
+          "kind": "service",
+          "label": "Analytics",
+          "status": "healthy",
+          "technology": "Spark",
+          "load": 50
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "type": "flow",
+        "source": "tv",
+        "target": "cdn",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "other",
+          "sync": "sync",
+          "label": "stream"
+        }
+      },
+      {
+        "id": "e2",
+        "type": "flow",
+        "source": "web",
+        "target": "cdn",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "other",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e3",
+        "type": "flow",
+        "source": "mobile",
+        "target": "gw",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e4",
+        "type": "flow",
+        "source": "web",
+        "target": "lb",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e5",
+        "type": "flow",
+        "source": "lb",
+        "target": "gw",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e6",
+        "type": "flow",
+        "source": "gw",
+        "target": "catalog",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e7",
+        "type": "flow",
+        "source": "gw",
+        "target": "playback",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e8",
+        "type": "flow",
+        "source": "gw",
+        "target": "reco",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e9",
+        "type": "flow",
+        "source": "gw",
+        "target": "user",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "http",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e10",
+        "type": "flow",
+        "source": "catalog",
+        "target": "catalogdb",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e11",
+        "type": "flow",
+        "source": "user",
+        "target": "userdb",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "db",
+          "sync": "sync"
+        }
+      },
+      {
+        "id": "e12",
+        "type": "flow",
+        "source": "reco",
+        "target": "redis",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "tcp",
+          "sync": "sync",
+          "animation": "flow"
+        }
+      },
+      {
+        "id": "e13",
+        "type": "flow",
+        "source": "playback",
+        "target": "video",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "tcp",
+          "sync": "sync",
+          "label": "segments"
+        }
+      },
+      {
+        "id": "e14",
+        "type": "flow",
+        "source": "cdn",
+        "target": "video",
+        "sourceHandle": "b",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "other",
+          "sync": "sync",
+          "label": "origin"
+        }
+      },
+      {
+        "id": "e15",
+        "type": "flow",
+        "source": "playback",
+        "target": "kafka",
+        "sourceHandle": "b",
+        "targetHandle": "t",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "pubsub",
+          "label": "PlayEvent"
+        }
+      },
+      {
+        "id": "e16",
+        "type": "flow",
+        "source": "kafka",
+        "target": "analytics",
+        "sourceHandle": "r",
+        "targetHandle": "l",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "animation": "flow"
+        }
+      },
+      {
+        "id": "e17",
+        "type": "flow",
+        "source": "kafka",
+        "target": "reco",
+        "sourceHandle": "l",
+        "targetHandle": "b",
+        "markerEnd": {
+          "type": "arrowclosed",
+          "color": "#64748b",
+          "width": 18,
+          "height": 18
+        },
+        "data": {
+          "protocol": "event",
+          "sync": "async",
+          "label": "signals"
+        }
+      }
+    ],
+    "updatedAt": 1781020291436
+  }
+}
