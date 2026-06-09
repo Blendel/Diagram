@@ -118,3 +118,18 @@ body {
   animation: detailenter 0.22s ease-out;
   transform-origin: center;
 }
+
+@keyframes detailexit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+.detail-exit {
+  animation: detailexit 0.18s ease-in forwards;
+  transform-origin: center;
+}

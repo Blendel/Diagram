@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Table2, Boxes, LayoutGrid } from 'lucide-react'
 import { useUiStore } from '../../store/useUiStore'
 import { useDiagramStore } from '../../store/useDiagramStore'
@@ -6,9 +6,15 @@ import { NODE_CATALOG, STATUS_META } from '../../lib/nodeCatalog'
 import { SUB_ORDER_DB } from '../../lib/subCatalog'
 import { uid } from '../../lib/uid'
 import type { ComponentChildren, SubNodeKind } from '../../types/diagram'
-import { ErdEditor } from './erd/ErdEditor'
-import { SubGraphEditor } from './subgraph/SubGraphEditor'
-import { WireframeEditor } from './wireframe/WireframeEditor'
+
+// Heavy editors are code-split: loaded only when a detail view is opened.
+const ErdEditor = lazy(() => import('./erd/ErdEditor').then((m) => ({ default: m.ErdEditor })))
+const SubGraphEditor = lazy(() =>
+  import('./subgraph/SubGraphEditor').then((m) => ({ default: m.SubGraphEditor })),
+)
+const WireframeEditor = lazy(() =>
+  import('./wireframe/WireframeEditor').then((m) => ({ default: m.WireframeEditor })),
+)
 
 /** Maps a legacy `data.functions` array (older schema) onto the new sub-graph. */
 function legacyChildren(data: Record<string, unknown>): ComponentChildren {
@@ -42,15 +48,25 @@ export function DetailView() {
   const update = useDiagramStore((s) => s.updateNodeData)
   const setLoad = useDiagramStore((s) => s.setLoad)
   const [dbTab, setDbTab] = useState<'schema' | 'objects'>('schema')
+  const [exiting, setExiting] = useState(false)
+
+  // Play a zoom-out exit animation before actually closing.
+  const handleClose = useCallback(() => {
+    setExiting(true)
+    window.setTimeout(() => {
+      setExiting(false)
+      close()
+    }, 200)
+  }, [close])
 
   useEffect(() => {
     if (!id) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
+      if (e.key === 'Escape') handleClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [id, close])
+  }, [id, handleClose])
 
   useEffect(() => {
     if (id && !node) close()
@@ -79,10 +95,12 @@ export function DetailView() {
     }`
 
   return (
-    <div className="detail-enter fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900">
+    <div
+      className={`${exiting ? 'detail-exit' : 'detail-enter'} fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900`}
+    >
       <header className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
         <button
-          onClick={close}
+          onClick={handleClose}
           className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <ArrowLeft size={15} /> Architettura
@@ -150,8 +168,15 @@ export function DetailView() {
 
       {/* Body: a dedicated canvas */}
       <div className="flex-1 min-h-0 p-4">
-        {isDb ? (
-          dbTab === 'schema' ? (
+        <Suspense
+          fallback={
+            <div className="grid place-items-center h-full text-sm text-slate-400">
+              Caricamento editor…
+            </div>
+          }
+        >
+          {isDb ? (
+            dbTab === 'schema' ? (
             <ErdEditor
               key={`${id}-erd`}
               initialTables={node.data.tables ?? []}
@@ -174,14 +199,15 @@ export function DetailView() {
             initialEdges={wireframe.edges}
             onChange={(nodes, edges) => update(id, { wireframe: { nodes, edges } })}
           />
-        ) : (
-          <SubGraphEditor
-            key={id}
-            initialNodes={children.nodes}
-            initialEdges={children.edges}
-            onChange={(nodes, edges) => update(id, { children: { nodes, edges } })}
-          />
-        )}
+          ) : (
+            <SubGraphEditor
+              key={id}
+              initialNodes={children.nodes}
+              initialEdges={children.edges}
+              onChange={(nodes, edges) => update(id, { children: { nodes, edges } })}
+            />
+          )}
+        </Suspense>
       </div>
     </div>
   )

@@ -43,6 +43,12 @@ interface UiState {
   contextMenu: ContextMenuState | null
   openContextMenu: (menu: ContextMenuState) => void
   closeContextMenu: () => void
+
+  /** Collapsible side panels (responsive layout). */
+  showPalette: boolean
+  showInspector: boolean
+  togglePalette: () => void
+  toggleInspector: () => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -68,11 +74,20 @@ export const useUiStore = create<UiState>()(
       contextMenu: null,
       openContextMenu: (menu) => set({ contextMenu: menu }),
       closeContextMenu: () => set({ contextMenu: null }),
+
+      showPalette: true,
+      showInspector: true,
+      togglePalette: () => set({ showPalette: !get().showPalette }),
+      toggleInspector: () => set({ showInspector: !get().showInspector }),
     }),
     {
       name: 'architect:ui',
-      // Only the theme is worth persisting; events/menus are transient.
-      partialize: (state) => ({ theme: state.theme }),
+      // Persist durable UI prefs; events/menus are transient.
+      partialize: (state) => ({
+        theme: state.theme,
+        showPalette: state.showPalette,
+        showInspector: state.showInspector,
+      }),
     },
   ),
 )

@@ -1,4 +1,6 @@
 import type { DiagramFile } from '../types/diagram'
+import { SCHEMA_VERSION } from '../types/diagram'
+import { migrateDiagram } from './migrate'
 
 /** Triggers a download of the diagram as a pretty-printed `.json` file. */
 export function downloadDiagram(file: DiagramFile): void {
@@ -27,5 +29,10 @@ export async function readDiagramFile(file: File): Promise<DiagramFile> {
   if (obj?.schema !== 'architect-diagram' || !obj.diagram) {
     throw new Error('Formato non riconosciuto')
   }
-  return obj as DiagramFile
+  // Upgrade older files to the current schema before they enter the app.
+  return {
+    schema: 'architect-diagram',
+    version: SCHEMA_VERSION,
+    diagram: migrateDiagram(obj.diagram),
+  }
 }

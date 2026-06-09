@@ -1,0 +1,7 @@
+# Normalize line endings: store as LF, check out native. Silences CRLF warnings on Windows.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.svg text

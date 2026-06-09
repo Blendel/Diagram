@@ -26,6 +26,8 @@ function App() {
   const undo = useDiagramStore((s) => s.undo)
   const redo = useDiagramStore((s) => s.redo)
   const theme = useUiStore((s) => s.theme)
+  const showPalette = useUiStore((s) => s.showPalette)
+  const showInspector = useUiStore((s) => s.showInspector)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -58,7 +60,7 @@ function App() {
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
         <Toolbar />
         <div className="flex flex-1 min-h-0">
-          <NodePalette />
+          {showPalette && <NodePalette />}
           <main className="relative flex-1 min-w-0" style={{ background: 'var(--canvas-bg)' }}>
             {hydrated ? (
               <FlowCanvas />
@@ -68,7 +70,7 @@ function App() {
               </div>
             )}
           </main>
-          <Inspector />
+          {showInspector && <Inspector />}
         </div>
         <StatusBar />
       </div>
