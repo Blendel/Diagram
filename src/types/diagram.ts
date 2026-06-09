@@ -215,6 +215,8 @@ export interface DiagramNodeData {
   /** Visual customization */
   shape?: NodeShape
   color?: string
+  /** Icon override (key into the icon registry); falls back to the kind's icon. */
+  icon?: string
   /** Boundary variant (group nodes only). */
   groupType?: GroupVariant
 

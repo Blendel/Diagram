@@ -6,6 +6,7 @@ import { NODE_CATALOG, STATUS_META, STATUS_ORDER } from '../../lib/nodeCatalog'
 import { PROTOCOL_META, PROTOCOL_ORDER, SYNC_META } from '../../lib/edgeCatalog'
 import { SHAPE_LABEL, SHAPE_ORDER } from '../../lib/shapes'
 import { GROUP_VARIANTS, GROUP_ORDER } from '../../lib/groupCatalog'
+import { ICON_REGISTRY, ICON_NAMES } from '../../lib/iconRegistry'
 import { PRESET_COLORS } from '../../lib/colors'
 import { inputCls, primaryBtnCls, dangerBtnCls } from '../../lib/ui'
 import { MetricSliders } from '../detail/MetricSliders'
@@ -27,7 +28,7 @@ function NodeInspector({ node }: { node: AppNode }) {
   const remove = useDiagramStore((s) => s.deleteNode)
   const openDetail = useUiStore((s) => s.openDetail)
   const meta = NODE_CATALOG[node.data.kind] ?? NODE_CATALOG.service
-  const Icon = meta.icon
+  const Icon = (node.data.icon && ICON_REGISTRY[node.data.icon]) || meta.icon
   const isGroup = node.data.kind === 'group'
   const accent = node.data.color || meta.accent
 
@@ -132,6 +133,40 @@ function NodeInspector({ node }: { node: AppNode }) {
 
       {!isGroup && (
         <>
+          <Field label="Icona">
+            <div className="grid grid-cols-8 gap-1 max-h-28 overflow-y-auto p-1 rounded-md border border-slate-200 dark:border-slate-700">
+              <button
+                title="Icona di default"
+                onClick={() => update(node.id, { icon: undefined })}
+                className={`grid place-items-center h-7 rounded text-[10px] ${
+                  !node.data.icon
+                    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'
+                    : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                auto
+              </button>
+              {ICON_NAMES.map((name) => {
+                const Ic = ICON_REGISTRY[name]
+                const active = node.data.icon === name
+                return (
+                  <button
+                    key={name}
+                    title={name}
+                    onClick={() => update(node.id, { icon: name })}
+                    className={`grid place-items-center h-7 rounded ${
+                      active
+                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <Ic size={15} />
+                  </button>
+                )
+              })}
+            </div>
+          </Field>
+
           <Field label="Stato">
             <select
               className={inputCls}

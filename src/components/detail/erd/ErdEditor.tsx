@@ -51,8 +51,6 @@ function ErdTableNode({ data, selected }: NodeProps<ErdNode>) {
         boxShadow: selected ? `0 0 0 2px ${ACCENT}33` : undefined,
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: ACCENT }} />
-      <Handle type="source" position={Position.Right} style={{ background: ACCENT }} />
       <div
         className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-semibold"
         style={{ background: `color-mix(in srgb, ${ACCENT} 16%, var(--node-bg))`, color: 'var(--node-text)' }}
@@ -67,9 +65,11 @@ function ErdTableNode({ data, selected }: NodeProps<ErdNode>) {
         {table.columns.map((c) => (
           <div
             key={c.id}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs border-t border-slate-100 dark:border-slate-700"
+            className="relative flex items-center gap-1.5 px-2.5 py-1 text-xs border-t border-slate-100 dark:border-slate-700"
             style={{ color: 'var(--node-text-muted)' }}
           >
+            <Handle type="target" position={Position.Left} id={`${c.id}__tgt`} style={{ background: ACCENT }} />
+            <Handle type="source" position={Position.Right} id={`${c.id}__src`} style={{ background: ACCENT }} />
             {c.pk ? (
               <KeyRound size={11} className="text-amber-500 shrink-0" />
             ) : c.fk ? (
@@ -114,6 +114,8 @@ const toEdge = (r: DbRelation): ErdEdge => ({
   id: r.id,
   source: r.source,
   target: r.target,
+  sourceHandle: r.sourceColumn ? `${r.sourceColumn}__src` : undefined,
+  targetHandle: r.targetColumn ? `${r.targetColumn}__tgt` : undefined,
   type: 'smoothstep',
   label: r.name || r.cardinality,
   markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
@@ -182,8 +184,20 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
   )
   const onConnect = useCallback((c: Connection) => {
     if (!c.source || !c.target || c.source === c.target) return
+    const sourceColumn = c.sourceHandle?.replace(/__(src|tgt)$/, '') || undefined
+    const targetColumn = c.targetHandle?.replace(/__(src|tgt)$/, '') || undefined
     setEdges((es) =>
-      addEdge(toEdge({ id: uid('rel'), source: c.source!, target: c.target!, cardinality: '1-n' }), es),
+      addEdge(
+        toEdge({
+          id: uid('rel'),
+          source: c.source!,
+          target: c.target!,
+          sourceColumn,
+          targetColumn,
+          cardinality: '1-n',
+        }),
+        es,
+      ),
     )
   }, [])
   const onSelectionChange = useCallback(({ nodes: n, edges: e }: OnSelectionChangeParams) => {
@@ -278,12 +292,23 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
                 columns: t.columns.map((c) => (c.id === cid ? { ...c, ...p } : c)),
               }))
             }
-            onRemoveColumn={(cid) =>
+            onRemoveColumn={(cid) => {
               patchTable(selectedTable.id, (t) => ({
                 ...t,
                 columns: t.columns.filter((c) => c.id !== cid),
               }))
-            }
+              // Drop column anchoring from any relation that referenced it.
+              setEdges((es) =>
+                es.map((e) => {
+                  let ne = e
+                  if (e.data?.sourceColumn === cid)
+                    ne = { ...ne, sourceHandle: undefined, data: { ...ne.data!, sourceColumn: undefined } }
+                  if (ne.data?.targetColumn === cid)
+                    ne = { ...ne, targetHandle: undefined, data: { ...ne.data!, targetColumn: undefined } }
+                  return ne
+                }),
+              )
+            }}
             onDelete={() => deleteTable(selectedTable.id)}
           />
         ) : selectedRel ? (
@@ -293,16 +318,19 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
             target={tableById(selectedRel.target)}
             onPatch={(p) =>
               setEdges((es) =>
-                es.map((e) =>
-                  e.id === selectedRel.id
-                    ? {
-                        ...e,
-                        data: { ...e.data, ...p } as RelData,
-                        label: ((p.name ?? e.data?.name) ||
-                          (p.cardinality ?? e.data?.cardinality)) as string,
-                      }
-                    : e,
-                ),
+                es.map((e) => {
+                  if (e.id !== selectedRel.id) return e
+                  const sc = p.sourceColumn ?? e.data?.sourceColumn
+                  const tc = p.targetColumn ?? e.data?.targetColumn
+                  return {
+                    ...e,
+                    data: { ...e.data, ...p } as RelData,
+                    label: ((p.name ?? e.data?.name) ||
+                      (p.cardinality ?? e.data?.cardinality)) as string,
+                    sourceHandle: sc ? `${sc}__src` : undefined,
+                    targetHandle: tc ? `${tc}__tgt` : undefined,
+                  }
+                }),
               )
             }
             onDelete={() => {

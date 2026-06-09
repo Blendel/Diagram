@@ -4,6 +4,7 @@ import type { AppNode } from '../../../types/diagram'
 import { NODE_CATALOG, STATUS_META } from '../../../lib/nodeCatalog'
 import { getShape } from '../../../lib/shapes'
 import { cssVars } from '../../../lib/ui'
+import { ICON_REGISTRY } from '../../../lib/iconRegistry'
 
 const HANDLES: { id: string; position: Position }[] = [
   { id: 't', position: Position.Top },
@@ -14,7 +15,7 @@ const HANDLES: { id: string; position: Position }[] = [
 
 export function ComponentNode({ data, selected }: NodeProps<AppNode>) {
   const meta = NODE_CATALOG[data.kind] ?? NODE_CATALOG.service
-  const Icon = meta.icon
+  const Icon = (data.icon && ICON_REGISTRY[data.icon]) || meta.icon
   const status = STATUS_META[data.status] ?? STATUS_META.unknown
   const accent = data.color || meta.accent
   const shape = getShape(data.shape ?? meta.defaultShape)
