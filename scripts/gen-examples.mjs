@@ -308,8 +308,275 @@ function bankingCqrs() {
   return file('banking-cqrs', 'Core Banking (CQRS)', nodes, edges)
 }
 
+// ===========================================================================
+// 5. ML / AI Pipeline — ingestion, feature store, training, model serving
+// ===========================================================================
+function mlPipeline() {
+  const servingChildren = {
+    nodes: [
+      sub('m-ep', 'endpoint', 'POST /predict', 40, 60, { method: 'POST', signature: '(features): Prediction' }),
+      sub('m-fn', 'function', 'loadModel', 320, 60, { async: true }),
+      sub('m-mod', 'module', 'Preprocessor', 320, 200),
+      sub('m-cls', 'class', 'Model', 600, 120, { signature: 'version, weights' }),
+    ],
+    edges: [subEdge('me1', 'm-ep', 'm-fn'), subEdge('me2', 'm-fn', 'm-mod'), subEdge('me3', 'm-fn', 'm-cls')],
+  }
+  const fsTables = [
+    table('t-feat', 'features', 40, 40, [
+      col('f-id', 'id', 'uuid', { pk: true }),
+      col('f-entity', 'entity_id', 'uuid', { fk: true }),
+      col('f-name', 'name', 'text'),
+      col('f-val', 'value', 'float8'),
+    ], [{ id: 'ix-f', name: 'ix_features_entity', columns: ['f-entity'] }]),
+    table('t-ent', 'entities', 360, 40, [
+      col('en-id', 'id', 'uuid', { pk: true }),
+      col('en-type', 'type', 'text'),
+    ]),
+  ]
+  const fsRel = [rel('r1', 't-feat', 't-ent', 'f-entity', 'en-id', '1-n', { name: 'fk_feat_entity' })]
+  const groups = [
+    group('g-ingest', 'Ingestione', 'cluster', 20, 60, 360, 360),
+    group('g-train', 'Training', 'namespace', 420, 60, 320, 360),
+    group('g-serve', 'Serving', 'cluster', 780, 40, 420, 460),
+  ]
+  const nodes = [
+    ...groups,
+    comp('sources', 'external', 'Data Sources', 40, 460, { description: 'API esterne / log' }),
+    comp('ingest', 'service', 'Ingestion', 50, 120, { load: 50 }),
+    comp('bus', 'queue', 'Kafka', 50, 300, { load: 55 }),
+    comp('pipe', 'stream', 'Feature Pipeline', 220, 120, { technology: 'Spark', load: 65 }),
+    comp('featuredb', 'database', 'Feature Store', 220, 300, { technology: 'PostgreSQL', load: 45, dbMode: 'relational', tables: fsTables, relations: fsRel }),
+    comp('lake', 'storage', 'Data Lake', 450, 120, { technology: 'S3' }),
+    comp('train', 'serverless', 'Training Job', 450, 300, { technology: 'SageMaker', load: 80 }),
+    comp('registry', 'storage', 'Model Registry', 620, 120, { technology: 'MLflow' }),
+    comp('serving', 'custom', 'Model Serving', 820, 110, { technology: 'TorchServe', load: 60, icon: 'Cpu', color: '#4f46e5', children: servingChildren }),
+    comp('gw', 'gateway', 'API Gateway', 820, 320, { port: '443' }),
+    comp('app', 'client', 'Consumer App', 1040, 320, { technology: 'React' }),
+    comp('drift', 'monitoring', 'Drift Monitor', 1040, 110, { technology: 'Evidently' }),
+  ]
+  const edges = [
+    edge('e1', 'sources', 'ingest', { protocol: 'http', sync: 'async', label: 'pull' }, 'r', 'l'),
+    edge('e2', 'ingest', 'bus', { protocol: 'event', sync: 'async', animation: 'pubsub' }, 'b', 't'),
+    edge('e3', 'bus', 'pipe', { protocol: 'event', sync: 'async', animation: 'flow' }, 'r', 'b'),
+    edge('e4', 'pipe', 'featuredb', { protocol: 'db', sync: 'sync', animation: 'pulse' }, 'b', 't'),
+    edge('e5', 'pipe', 'lake', { protocol: 'tcp', sync: 'sync' }),
+    edge('e6', 'lake', 'train', { protocol: 'tcp', sync: 'sync', label: 'dataset' }, 'b', 't'),
+    edge('e7', 'featuredb', 'train', { protocol: 'db', sync: 'sync', label: 'features' }, 'r', 'l'),
+    edge('e8', 'train', 'registry', { protocol: 'tcp', sync: 'sync', label: 'push model' }),
+    edge('e9', 'registry', 'serving', { protocol: 'tcp', sync: 'sync', label: 'load' }),
+    edge('e10', 'gw', 'serving', { protocol: 'grpc', sync: 'sync' }, 't', 'b'),
+    edge('e11', 'app', 'gw', { protocol: 'http', sync: 'sync' }, 'l', 'r'),
+    edge('e12', 'serving', 'drift', { protocol: 'event', sync: 'async', label: 'predictions' }, 'r', 'l'),
+  ]
+  return file('ml-pipeline', 'ML / AI Pipeline', nodes, edges)
+}
+
+// ===========================================================================
+// 6. E-Health — security-first, FHIR store + clinical docs, audit
+// ===========================================================================
+function ehealth() {
+  const tables = [
+    table('t-pat', 'patients', 40, 40, [
+      col('p-id', 'id', 'uuid', { pk: true }),
+      col('p-mrn', 'mrn', 'text', { unique: true }),
+      col('p-name', 'name', 'text'),
+      col('p-dob', 'dob', 'date'),
+    ], [{ id: 'ix-mrn', name: 'ix_patients_mrn', columns: ['p-mrn'], unique: true }]),
+    table('t-enc', 'encounters', 360, 40, [
+      col('e-id', 'id', 'uuid', { pk: true }),
+      col('e-pat', 'patient_id', 'uuid', { fk: true }),
+      col('e-date', 'date', 'timestamptz' ),
+      col('e-type', 'type', 'text'),
+    ]),
+    table('t-obs', 'observations', 360, 260, [
+      col('o-id', 'id', 'uuid', { pk: true }),
+      col('o-enc', 'encounter_id', 'uuid', { fk: true }),
+      col('o-code', 'loinc', 'text'),
+      col('o-val', 'value', 'text'),
+    ]),
+  ]
+  const relations = [
+    rel('r1', 't-enc', 't-pat', 'e-pat', 'p-id', '1-n', { name: 'fk_enc_patient', onDelete: 'restrict' }),
+    rel('r2', 't-obs', 't-enc', 'o-enc', 'e-id', '1-n', { name: 'fk_obs_encounter', onDelete: 'cascade' }),
+  ]
+  const docs = [
+    coll('c-docs', 'clinical_docs', 60, 60, [
+      field('cd-id', '_id', 'ObjectId'),
+      field('cd-pat', 'patient_id', 'ObjectId'),
+      field('cd-type', 'type', 'string'),
+      field('cd-content', 'content', 'object', { embedded: true }),
+      field('cd-att', 'attachments', 'string', { array: true }),
+    ]),
+  ]
+  const groups = [
+    group('g-edge', 'Accesso', 'region', 20, 60, 280, 360),
+    group('g-core', 'Servizi clinici', 'cluster', 340, 40, 440, 520),
+    group('g-data', 'Dati (PHI)', 'vpc', 820, 60, 420, 460),
+  ]
+  const nodes = [
+    ...groups,
+    comp('patient', 'client', 'Patient App', 50, 120, { technology: 'Flutter', load: 20 }),
+    comp('provider', 'client', 'Provider Portal', 50, 300, { technology: 'Angular', load: 30 }),
+    comp('waf', 'firewall', 'WAF', 200, 120, { technology: 'WAF' }),
+    comp('gw', 'gateway', 'API Gateway', 200, 300, { port: '443', load: 40 }),
+    comp('auth', 'auth', 'IAM (SSO)', 360, 80, { technology: 'OAuth2/OIDC' }),
+    comp('appts', 'service', 'Appointments', 360, 230, { load: 45 }),
+    comp('ehr', 'service', 'EHR', 560, 230, { load: 55 }),
+    comp('billing', 'service', 'Billing', 360, 400, { load: 35 }),
+    comp('vault', 'secrets', 'PHI Vault', 560, 400, { technology: 'Vault' }),
+    comp('fhir', 'database', 'FHIR Store', 840, 110, { technology: 'PostgreSQL', load: 50, dbMode: 'relational', tables, relations }),
+    comp('docdb', 'database', 'Clinical Docs', 840, 300, { technology: 'MongoDB', load: 30, dbMode: 'document', collections: docs, references: [] }),
+    comp('audit', 'monitoring', 'Audit & Monitoring', 1060, 110, { technology: 'SIEM' }),
+    comp('lab', 'external', 'Lab System', 1060, 300, { description: 'HL7/FHIR' }),
+    comp('pharmacy', 'external', 'Pharmacy', 1060, 420, { description: 'e-Prescription' }),
+  ]
+  const edges = [
+    edge('e1', 'patient', 'waf', { protocol: 'http', sync: 'sync', label: 'HTTPS' }),
+    edge('e2', 'provider', 'gw', { protocol: 'http', sync: 'sync' }),
+    edge('e3', 'waf', 'gw', { protocol: 'http', sync: 'sync' }, 'b', 't'),
+    edge('e4', 'gw', 'auth', { protocol: 'grpc', sync: 'sync', bidirectional: true, sourceMult: '1', targetMult: '1' }),
+    edge('e5', 'gw', 'appts', { protocol: 'http', sync: 'sync' }),
+    edge('e6', 'appts', 'ehr', { protocol: 'grpc', sync: 'sync' }),
+    edge('e7', 'gw', 'billing', { protocol: 'http', sync: 'sync' }, 'b', 'l'),
+    edge('e8', 'ehr', 'fhir', { protocol: 'db', sync: 'sync', animation: 'pulse' }),
+    edge('e9', 'ehr', 'docdb', { protocol: 'db', sync: 'sync' }, 'b', 'l'),
+    edge('e10', 'ehr', 'vault', { protocol: 'tcp', sync: 'sync', label: 'decrypt PHI' }, 'b', 't'),
+    edge('e11', 'ehr', 'lab', { protocol: 'http', sync: 'async', label: 'HL7' }, 'r', 'l'),
+    edge('e12', 'billing', 'pharmacy', { protocol: 'http', sync: 'sync' }, 'r', 'l'),
+    edge('e13', 'audit', 'ehr', { protocol: 'other', sync: 'async', label: 'audit log' }, 'l', 'r'),
+  ]
+  return file('ehealth', 'E-Health Platform', nodes, edges)
+}
+
+// ===========================================================================
+// 7. Gaming Backend — matchmaking, realtime, leaderboard, anti-cheat
+// ===========================================================================
+function gamingBackend() {
+  const mmChildren = {
+    nodes: [
+      sub('mm-ep', 'endpoint', 'POST /queue', 40, 60, { method: 'POST' }),
+      sub('mm-uc', 'usecase', 'FindMatch', 320, 60, { async: true }),
+      sub('mm-fn', 'function', 'rankPlayers', 320, 200, { signature: '(pool): Match' }),
+      sub('mm-var', 'variable', 'MMR_RANGE', 600, 120, { signature: '= 150' }),
+    ],
+    edges: [subEdge('mme1', 'mm-ep', 'mm-uc'), subEdge('mme2', 'mm-uc', 'mm-fn'), subEdge('mme3', 'mm-fn', 'mm-var')],
+  }
+  const groups = [
+    group('g-edge', 'Edge', 'region', 20, 60, 300, 460),
+    group('g-core', 'Backend', 'cluster', 360, 40, 480, 560),
+    group('g-data', 'Dati', 'vpc', 880, 60, 420, 460),
+  ]
+  const nodes = [
+    ...groups,
+    comp('console', 'client', 'Console', 50, 120, { technology: 'Unreal', load: 30 }),
+    comp('pc', 'client', 'PC Client', 50, 280, { technology: 'Unity', load: 35 }),
+    comp('mobile', 'client', 'Mobile', 50, 440, { technology: 'Unity', load: 25 }),
+    comp('cdn', 'cdn', 'Asset CDN', 220, 120, { load: 50 }),
+    comp('lb', 'loadbalancer', 'Load Balancer', 220, 280),
+    comp('rt', 'gateway', 'Realtime GW', 220, 440, { technology: 'WebSocket', load: 60 }),
+    comp('mm', 'service', 'Matchmaking', 390, 80, { load: 65, children: mmChildren }),
+    comp('gs', 'custom', 'Game Server', 390, 230, { technology: 'Dedicated', load: 82, status: 'degraded', icon: 'Server', color: '#16a34a' }),
+    comp('inv', 'service', 'Inventory', 390, 380, { load: 40 }),
+    comp('anticheat', 'stream', 'Anti-Cheat', 390, 520, { technology: 'Flink', load: 70 }),
+    comp('leaderboard', 'cache', 'Leaderboard', 900, 110, { technology: 'Redis', load: 55 }),
+    comp('playerdb', 'database', 'Player DB', 900, 290, { technology: 'PostgreSQL', load: 48 }),
+    comp('bus', 'queue', 'Event Bus', 640, 620, { technology: 'Kafka', load: 60 }),
+    comp('analytics', 'service', 'Analytics', 1120, 290, { technology: 'BigQuery' }),
+  ]
+  const edges = [
+    edge('e1', 'console', 'cdn', { protocol: 'other', sync: 'sync', label: 'assets' }),
+    edge('e2', 'pc', 'lb', { protocol: 'http', sync: 'sync' }),
+    edge('e3', 'mobile', 'rt', { protocol: 'tcp', sync: 'async', label: 'ws' }),
+    edge('e4', 'pc', 'rt', { protocol: 'tcp', sync: 'async', label: 'ws' }),
+    edge('e5', 'lb', 'mm', { protocol: 'http', sync: 'sync' }),
+    edge('e6', 'rt', 'gs', { protocol: 'tcp', sync: 'async', bidirectional: true, label: 'state' }, 'r', 'l'),
+    edge('e7', 'mm', 'gs', { protocol: 'grpc', sync: 'sync', label: 'assign' }),
+    edge('e8', 'gs', 'playerdb', { protocol: 'db', sync: 'sync' }),
+    edge('e9', 'gs', 'leaderboard', { protocol: 'tcp', sync: 'sync', animation: 'flow', label: 'score' }),
+    edge('e10', 'inv', 'playerdb', { protocol: 'db', sync: 'sync' }),
+    edge('e11', 'gs', 'bus', { protocol: 'event', sync: 'async', animation: 'pubsub', label: 'MatchEvent' }, 'b', 't'),
+    edge('e12', 'bus', 'anticheat', { protocol: 'event', sync: 'async', animation: 'flow' }, 'l', 'b'),
+    edge('e13', 'bus', 'analytics', { protocol: 'event', sync: 'async' }, 'r', 'b'),
+  ]
+  return file('gaming-backend', 'Gaming Backend', nodes, edges)
+}
+
+// ===========================================================================
+// 8. Logistics — orders, WMS, route optimization, fleet tracking
+// ===========================================================================
+function logistics() {
+  const trackingWireframe = {
+    nodes: [
+      ui('tf', 'frame', 'Tracking', 20, 20, 380, 560, { breakpoint: 'mobile' }),
+      ui('tn', 'navbar', 'TrackIt', 44, 44, 320, 44, { count: 2 }),
+      ui('th', 'heading', 'Ordine #1234', 44, 104, 260, 36, { size: 'md' }),
+      ui('tmap', 'image', 'Mappa', 44, 152, 320, 180),
+      ui('tprog', 'progress', 'Consegna', 44, 348, 320, 18, { percent: 65 }),
+      ui('tlist', 'list', 'Tappe', 44, 384, 320, 130, { count: 4, withAvatar: false }),
+      ui('tbtn', 'button', 'Contatta corriere', 44, 528, 320, 44, { variant: 'solid' }),
+      ui('tnote', 'note', 'ETA aggiornata via webhook', 240, 104, 130, 44),
+    ],
+    edges: [],
+  }
+  const ordTables = [
+    table('t-ord', 'orders', 40, 40, [
+      col('od-id', 'id', 'uuid', { pk: true }),
+      col('od-cust', 'customer_id', 'uuid', { fk: true }),
+      col('od-status', 'status', 'text', { default: "'created'" }),
+    ]),
+    table('t-ship', 'shipments', 360, 40, [
+      col('sh-id', 'id', 'uuid', { pk: true }),
+      col('sh-ord', 'order_id', 'uuid', { fk: true }),
+      col('sh-eta', 'eta', 'timestamptz' ),
+    ]),
+  ]
+  const ordRel = [rel('r1', 't-ship', 't-ord', 'sh-ord', 'od-id', '1-1', { name: 'fk_ship_order', onDelete: 'cascade' })]
+  const groups = [
+    group('g-field', 'Campo', 'zone', 20, 60, 280, 360),
+    group('g-core', 'Servizi', 'cluster', 340, 40, 460, 480),
+    group('g-data', 'Dati', 'vpc', 840, 60, 400, 360),
+  ]
+  const nodes = [
+    ...groups,
+    comp('fleet', 'client', 'Fleet Devices', 50, 120, { technology: 'GPS/Android', load: 30 }),
+    comp('customer', 'client', 'Customer App', 50, 300, { technology: 'React Native', load: 18, wireframe: trackingWireframe }),
+    comp('gw', 'gateway', 'API Gateway', 360, 90, { port: '443', load: 40 }),
+    comp('orders', 'service', 'Order Service', 360, 240, { load: 50 }),
+    comp('wms', 'service', 'Warehouse (WMS)', 560, 90, { load: 45 }),
+    comp('routing', 'stream', 'Route Optimizer', 560, 240, { technology: 'Flink', load: 68 }),
+    comp('notify', 'service', 'Notifications', 560, 390, { technology: 'Python' }),
+    comp('ordersdb', 'database', 'Orders DB', 860, 110, { technology: 'PostgreSQL', load: 50, dbMode: 'relational', tables: ordTables, relations: ordRel }),
+    comp('invdb', 'database', 'Inventory DB', 860, 300, { technology: 'PostgreSQL', load: 40 }),
+    comp('bus', 'queue', 'Event Bus', 1080, 110, { technology: 'Kafka', load: 55 }),
+    comp('maps', 'external', 'Maps API', 1080, 300, { description: 'Google Maps' }),
+  ]
+  const edges = [
+    edge('e1', 'fleet', 'gw', { protocol: 'http', sync: 'async', label: 'GPS', sourceMult: '*', targetMult: '1' }),
+    edge('e2', 'customer', 'gw', { protocol: 'http', sync: 'sync' }),
+    edge('e3', 'gw', 'orders', { protocol: 'http', sync: 'sync' }, 'b', 'l'),
+    edge('e4', 'gw', 'wms', { protocol: 'http', sync: 'sync' }),
+    edge('e5', 'orders', 'ordersdb', { protocol: 'db', sync: 'sync', animation: 'pulse' }),
+    edge('e6', 'wms', 'invdb', { protocol: 'db', sync: 'sync' }, 'b', 'l'),
+    edge('e7', 'orders', 'bus', { protocol: 'event', sync: 'async', animation: 'pubsub', label: 'OrderPlaced' }),
+    edge('e8', 'bus', 'routing', { protocol: 'event', sync: 'async', animation: 'flow' }, 'l', 'r'),
+    edge('e9', 'routing', 'maps', { protocol: 'http', sync: 'sync', label: 'directions' }),
+    edge('e10', 'routing', 'notify', { protocol: 'event', sync: 'async', label: 'ETA' }, 'b', 'r'),
+    edge('e11', 'notify', 'customer', { protocol: 'http', sync: 'async', label: 'push' }, 'l', 'b'),
+  ]
+  return file('logistics', 'Logistics / Supply Chain', nodes, edges)
+}
+
 // ---------------------------------------------------------------------------
-const examples = [saasStarter(), iotPlatform(), streamingMedia(), bankingCqrs()]
+const examples = [
+  saasStarter(),
+  iotPlatform(),
+  streamingMedia(),
+  bankingCqrs(),
+  mlPipeline(),
+  ehealth(),
+  gamingBackend(),
+  logistics(),
+]
 mkdirSync(new URL('../examples/', import.meta.url), { recursive: true })
 for (const ex of examples) {
   const url = new URL(`../examples/${ex.diagram.id}.json`, import.meta.url)

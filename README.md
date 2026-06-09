@@ -42,6 +42,10 @@ trascina il `.json` nell'app):
 - **iot-platform.json** — IoT/edge, MQTT, stream processing, telemetria NoSQL
 - **streaming-media.json** — piattaforma streaming a microservizi
 - **banking-cqrs.json** — core banking CQRS/event-sourcing con sicurezza
+- **ml-pipeline.json** — pipeline ML/AI (ingestion, feature store, training, serving)
+- **ehealth.json** — piattaforma e-health (FHIR + docs, sicurezza/PHI, audit)
+- **gaming-backend.json** — backend di gioco (matchmaking, realtime, anti-cheat)
+- **logistics.json** — logistica/supply-chain (WMS, route optimizer, tracking)
 
 Rigenerabili con `node scripts/gen-example.mjs` e `node scripts/gen-examples.mjs`.
 
