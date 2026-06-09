@@ -12,9 +12,15 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  ConnectionMode,
+  MarkerType,
+  addEdge,
+  applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
+  type Connection,
   type NodeChange,
+  type EdgeChange,
   type NodeTypes,
   type Edge,
   type OnSelectionChangeParams,
@@ -35,10 +41,16 @@ const UI_DND = 'application/architect-ui'
 /** In-memory clipboard for copy/paste inside the wireframe editor. */
 let wireClipboard: UiNode[] = []
 
-const DEVICES: Record<string, [number, number]> = {
-  phone: [360, 640],
-  tablet: [680, 900],
-  desktop: [960, 560],
+type Breakpoint = NonNullable<UiNodeData['breakpoint']>
+const BREAKPOINTS: { id: Breakpoint; label: string; w: number; h: number }[] = [
+  { id: 'mobile', label: 'Mobile', w: 375, h: 720 },
+  { id: 'tablet', label: 'Tablet', w: 768, h: 900 },
+  { id: 'desktop', label: 'Desktop', w: 1280, h: 800 },
+]
+
+const dimVal = (v: unknown, fallback: number) => {
+  const n = typeof v === 'number' ? v : parseFloat(String(v))
+  return Number.isFinite(n) ? n : fallback
 }
 
 interface Props {
@@ -110,7 +122,7 @@ function makeUi(kind: UiKind, position: { x: number; y: number }): UiNode {
 
 function Inner({ initialNodes, initialEdges, onChange }: Props) {
   const [nodes, setNodes] = useState<UiNode[]>(initialNodes)
-  const [edges] = useState<Edge[]>(initialEdges)
+  const [edges, setEdges] = useState<Edge[]>(initialEdges)
   const [sel, setSel] = useState<string | null>(null)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [helperH, setHelperH] = useState<number | undefined>(undefined)
@@ -153,6 +165,25 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
     ({ nodes: n }: OnSelectionChangeParams) => setSel(n[0]?.id ?? null),
     [],
   )
+  const onEdgesChange = useCallback(
+    (ch: EdgeChange<Edge>[]) => setEdges((es) => applyEdgeChanges(ch, es)),
+    [],
+  )
+  const onConnect = useCallback((c: Connection) => {
+    if (!c.source || !c.target) return
+    setEdges((es) =>
+      addEdge(
+        {
+          ...c,
+          id: uid('we'),
+          type: 'smoothstep',
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
+          style: { stroke: '#3b82f6', strokeDasharray: '5 4' },
+        },
+        es,
+      ),
+    )
+  }, [])
 
   const addAt = (kind: UiKind, position: { x: number; y: number }) => {
     const n = makeUi(kind, position)
@@ -214,6 +245,40 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
     }
     setNodes((ns) => [...ns, clone])
     setSel(clone.id)
+  }
+  // Duplicate a frame and the elements it contains as a responsive variant beside it.
+  const createVariant = () => {
+    const frame = nodes.find((n) => n.id === sel && n.data.kind === 'frame')
+    if (!frame) return
+    const fx = frame.position.x
+    const fy = frame.position.y
+    const fw = dimVal(frame.style?.width, UI_CATALOG.frame.w)
+    const fh = dimVal(frame.style?.height, UI_CATALOG.frame.h)
+    const contained = nodes.filter((n) => {
+      if (n.id === frame.id || n.data.kind === 'frame') return false
+      const w = dimVal(n.style?.width, UI_CATALOG[n.data.kind].w)
+      const h = dimVal(n.style?.height, UI_CATALOG[n.data.kind].h)
+      const cx = n.position.x + w / 2
+      const cy = n.position.y + h / 2
+      return cx >= fx && cx <= fx + fw && cy >= fy && cy <= fy + fh
+    })
+    const dx = fw + 80
+    const newFrame: UiNode = {
+      ...frame,
+      id: uid('ui'),
+      position: { x: fx + dx, y: fy },
+      selected: true,
+      data: { ...frame.data, label: `${frame.data.label} (variante)` },
+    }
+    const clones: UiNode[] = contained.map((n) => ({
+      ...n,
+      id: uid('ui'),
+      position: { x: n.position.x + dx, y: n.position.y },
+      selected: false,
+      data: { ...n.data },
+    }))
+    setNodes((ns) => [newFrame, ...ns.map((x) => ({ ...x, selected: false })), ...clones])
+    setSel(newFrame.id)
   }
 
   // Edit-mode shortcuts: duplicate (Ctrl+D), copy/paste (Ctrl+C / Ctrl+V).
@@ -320,8 +385,10 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
               edges={edges}
               nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
               onSelectionChange={onSelectionChange}
-              nodesConnectable={false}
+              connectionMode={ConnectionMode.Loose}
               elementsSelectable
               elevateNodesOnSelect={false}
               deleteKeyCode={['Backspace', 'Delete']}
@@ -346,6 +413,7 @@ function Inner({ initialNodes, initialEdges, onChange }: Props) {
                 onForward={bringForward}
                 onBackward={sendBackward}
                 onDuplicate={duplicateEl}
+                onCreateVariant={createVariant}
                 onDelete={del}
               />
             ) : (
@@ -416,6 +484,7 @@ function ElementInspector({
   onForward,
   onBackward,
   onDuplicate,
+  onCreateVariant,
   onDelete,
 }: {
   node: UiNode
@@ -425,6 +494,7 @@ function ElementInspector({
   onForward: () => void
   onBackward: () => void
   onDuplicate: () => void
+  onCreateVariant: () => void
   onDelete: () => void
 }) {
   const d = node.data
@@ -457,19 +527,35 @@ function ElementInspector({
       </Field>
 
       {d.kind === 'frame' && (
-        <Field label="Dispositivo">
-          <div className="flex gap-1.5">
-            {Object.entries(DEVICES).map(([name, [w, h]]) => (
-              <button
-                key={name}
-                onClick={() => setDevice(w, h)}
-                className="flex-1 capitalize rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        </Field>
+        <>
+          <Field label="Breakpoint">
+            <div className="flex gap-1.5">
+              {BREAKPOINTS.map((bp) => (
+                <button
+                  key={bp.id}
+                  onClick={() => {
+                    setDevice(bp.w, bp.h)
+                    patch({ breakpoint: bp.id })
+                  }}
+                  className={`flex-1 rounded-md border px-2 py-1 text-xs transition ${
+                    d.breakpoint === bp.id
+                      ? 'border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {bp.label}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <button
+            className="inline-flex items-center gap-1.5 mb-3 rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            onClick={onCreateVariant}
+            title="Duplica lo schermo e i suoi elementi come variante affiancata"
+          >
+            <CopyPlus size={14} /> Crea variante responsive
+          </button>
+        </>
       )}
 
       {d.kind === 'navbar' && (

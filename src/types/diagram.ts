@@ -151,6 +151,8 @@ export interface UiNodeData {
   checked?: boolean
   on?: boolean
   tab?: number
+  /** responsive breakpoint tag (frame elements) */
+  breakpoint?: 'mobile' | 'tablet' | 'desktop'
 
   [key: string]: unknown
 }

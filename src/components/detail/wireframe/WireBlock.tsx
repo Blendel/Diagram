@@ -58,6 +58,11 @@ export function WireBlock({
             <span className="ml-2 text-[11px] font-semibold truncate" style={{ color: 'var(--node-text-muted)' }}>
               {label}
             </span>
+            {data.breakpoint && (
+              <span className="text-[10px] capitalize opacity-70" style={{ color: accent }}>
+                · {data.breakpoint}
+              </span>
+            )}
           </div>
         </div>
       )

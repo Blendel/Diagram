@@ -7,17 +7,21 @@ import {
   Controls,
   Handle,
   Position,
-  MarkerType,
   ConnectionMode,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
   type Node,
   type Edge,
   type NodeProps,
   type NodeChange,
   type EdgeChange,
   type NodeTypes,
+  type EdgeTypes,
+  type EdgeProps,
   type Connection,
   type OnSelectionChangeParams,
 } from '@xyflow/react'
@@ -90,6 +94,77 @@ function ErdTableNode({ data, selected }: NodeProps<ErdNode>) {
 
 const erdNodeTypes: NodeTypes = { erdTable: ErdTableNode }
 
+/** Crow's-foot end markers (shared SVG defs, referenced by url). */
+function ErdMarkers() {
+  return (
+    <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden>
+      <defs>
+        <marker id="erd-one" markerWidth="18" markerHeight="18" refX="9" refY="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+          <path d="M9,3 L9,15" stroke="#94a3b8" strokeWidth="1.6" />
+        </marker>
+        <marker id="erd-many" markerWidth="20" markerHeight="20" refX="2" refY="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+          <path d="M2,10 L16,3 M2,10 L16,10 M2,10 L16,17" stroke="#94a3b8" strokeWidth="1.5" fill="none" />
+        </marker>
+      </defs>
+    </svg>
+  )
+}
+
+/** Relation edge drawn with crow's-foot notation from its cardinality. */
+function ErdEdgeView({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+  selected,
+}: EdgeProps<ErdEdge>) {
+  const [path, lx, ly] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    borderRadius: 8,
+  })
+  const card = data?.cardinality ?? '1-n'
+  const startType = card.startsWith('n') ? 'many' : 'one'
+  const endType = card.endsWith('n') ? 'many' : 'one'
+  const label = data?.name || card
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        markerStart={`url(#erd-${startType})`}
+        markerEnd={`url(#erd-${endType})`}
+        style={{ stroke: selected ? ACCENT : '#94a3b8', strokeWidth: selected ? 2 : 1.5 }}
+      />
+      {label && (
+        <EdgeLabelRenderer>
+          <div
+            className="absolute px-1.5 py-0.5 rounded text-[10px] font-medium shadow-sm pointer-events-none"
+            style={{
+              transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`,
+              background: 'var(--node-bg)',
+              color: 'var(--node-text-muted)',
+              border: '1px solid var(--node-border)',
+            }}
+          >
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  )
+}
+
+const erdEdgeTypes: EdgeTypes = { erd: ErdEdgeView }
+
 interface ErdEditorProps {
   initialTables: DbTable[]
   initialRelations: DbRelation[]
@@ -116,10 +191,7 @@ const toEdge = (r: DbRelation): ErdEdge => ({
   target: r.target,
   sourceHandle: r.sourceColumn ? `${r.sourceColumn}__src` : undefined,
   targetHandle: r.targetColumn ? `${r.targetColumn}__tgt` : undefined,
-  type: 'smoothstep',
-  label: r.name || r.cardinality,
-  markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
-  style: { stroke: '#94a3b8' },
+  type: 'erd',
   data: {
     sourceColumn: r.sourceColumn,
     targetColumn: r.targetColumn,
@@ -256,10 +328,12 @@ function ErdInner({ initialTables, initialRelations, onChange }: ErdEditorProps)
             <Plus size={14} /> Tabella
           </button>
         </div>
+        <ErdMarkers />
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={erdNodeTypes}
+          edgeTypes={erdEdgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}

@@ -133,3 +133,13 @@ body {
   animation: detailexit 0.18s ease-in forwards;
   transform-origin: center;
 }
+
+/* Wireframe connection handles: hidden until the element is hovered/selected */
+.wf-handle {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.react-flow__node:hover .wf-handle,
+.react-flow__node.selected .wf-handle {
+  opacity: 1;
+}
