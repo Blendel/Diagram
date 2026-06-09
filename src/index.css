@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+
+/* Enable class-based dark mode: `dark:` variants apply under a `.dark` ancestor. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  --canvas-bg: #f1f5f9;
+  --dot: #cbd5e1;
+  --node-bg: #ffffff;
+  --node-border: #e2e8f0;
+  --node-text: #1e293b;
+  --node-text-muted: #64748b;
+}
+
+.dark {
+  color-scheme: dark;
+  --canvas-bg: #0b1220;
+  --dot: #1e293b;
+  --node-bg: #1e293b;
+  --node-border: #334155;
+  --node-text: #e2e8f0;
+  --node-text-muted: #94a3b8;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- React Flow theming --- */
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__handle {
+  width: 9px;
+  height: 9px;
+  background: #64748b;
+  border: 2px solid var(--node-bg);
+}
+.react-flow__handle:hover {
+  background: #2563eb;
+}
+
+.dark .react-flow__controls-button {
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  color: #e2e8f0;
+  fill: #e2e8f0;
+}
+.dark .react-flow__controls-button:hover {
+  background: #334155;
+}
+.dark .react-flow__minimap {
+  background-color: #0b1220;
+}
+
+/* Dashed flow animation for async / "flow" edges */
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* Pulsing ring for components in a critical operational state */
+@keyframes statuspulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse, rgba(220, 38, 38, 0.45));
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+.node-pulse {
+  animation: statuspulse 1.8s ease-out infinite;
+}
+
+/* Subtle entrance for the context menu / modal */
+@keyframes popin {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.pop-in {
+  animation: popin 0.12s ease-out;
+}
+
+/* Zoom-in entrance for the full-screen component detail view */
+@keyframes detailenter {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.detail-enter {
+  animation: detailenter 0.22s ease-out;
+  transform-origin: center;
+}

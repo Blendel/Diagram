@@ -1,0 +1,221 @@
+import type { Node, Edge } from '@xyflow/react'
+
+/** The kind of architectural component a node represents. */
+export type NodeKind =
+  | 'service'
+  | 'database'
+  | 'queue'
+  | 'gateway'
+  | 'client'
+  | 'cache'
+  | 'external'
+  | 'group'
+
+/** Live/operational status shown as a colored indicator on the node. */
+export type NodeStatus = 'healthy' | 'degraded' | 'down' | 'unknown'
+
+/** Geometric shape of a component node. */
+export type NodeShape =
+  | 'rounded'
+  | 'rectangle'
+  | 'pill'
+  | 'cylinder'
+  | 'circle'
+  | 'hexagon'
+  | 'diamond'
+
+// --- Component drill-down: an internal sub-diagram --------------------------
+
+/** Kind of an internal sub-component shown in a component's dedicated canvas. */
+export type SubNodeKind =
+  | 'function'
+  | 'endpoint'
+  | 'module'
+  | 'variable'
+  | 'class'
+  | 'note'
+  // database-flavored objects
+  | 'procedure'
+  | 'view'
+  | 'trigger'
+
+export interface SubNodeData {
+  kind: SubNodeKind
+  label: string
+  /** e.g. "(id: string): Order" or "GET /orders/:id" */
+  signature?: string
+  description?: string
+  [key: string]: unknown
+}
+
+export type SubNode = Node<SubNodeData>
+export type SubEdge = Edge
+
+/** The internal map of a component (its functions, endpoints, modules, variables…). */
+export interface ComponentChildren {
+  nodes: SubNode[]
+  edges: SubEdge[]
+}
+
+// --- Web App drill-down: a low-fidelity page/wireframe designer -------------
+
+export type UiKind =
+  | 'frame'
+  | 'navbar'
+  | 'heading'
+  | 'text'
+  | 'button'
+  | 'input'
+  | 'image'
+  | 'card'
+  | 'list'
+  | 'divider'
+  | 'avatar'
+  | 'badge'
+  | 'tabs'
+  | 'checkbox'
+  | 'toggle'
+
+export interface UiNodeData {
+  kind: UiKind
+  label: string
+  /** For interactive preview: id of the frame this element navigates to when activated. */
+  link?: string
+
+  // --- editable characteristics (per element kind) ---
+  /** navbar menu items / list rows / number of tabs */
+  count?: number
+  /** text & card body skeleton lines */
+  lines?: number
+  /** button / badge visual style */
+  variant?: 'solid' | 'soft' | 'outline'
+  /** heading font size */
+  size?: 'sm' | 'md' | 'lg'
+  /** input field type */
+  inputType?: 'text' | 'email' | 'password' | 'search' | 'number'
+  /** list rows show a leading avatar */
+  withAvatar?: boolean
+  /** card shows a top image band */
+  withImage?: boolean
+  /** checkbox default checked / toggle default on / default active tab */
+  checked?: boolean
+  on?: boolean
+  tab?: number
+
+  [key: string]: unknown
+}
+
+export type UiNode = Node<UiNodeData>
+
+/** The page wireframe of a client component. */
+export interface Wireframe {
+  nodes: UiNode[]
+  edges: Edge[]
+}
+
+// --- Database drill-down: relational schema ---------------------------------
+
+export interface DbColumn {
+  id: string
+  name: string
+  type: string
+  pk?: boolean
+  fk?: boolean
+  nullable?: boolean
+}
+
+export interface DbTable {
+  id: string
+  name: string
+  x: number
+  y: number
+  columns: DbColumn[]
+}
+
+export interface DbRelation {
+  id: string
+  source: string
+  target: string
+  sourceColumn?: string
+  targetColumn?: string
+  cardinality: '1-1' | '1-n' | 'n-n'
+}
+
+/**
+ * Payload carried by every node. React Flow requires node data to be an
+ * index-signature object, hence the `[key: string]: unknown`.
+ */
+export interface DiagramNodeData {
+  kind: NodeKind
+  label: string
+  status: NodeStatus
+  technology?: string
+  description?: string
+  owner?: string
+  url?: string
+  port?: string
+
+  /** Visual customization */
+  shape?: NodeShape
+  color?: string
+
+  /** Dynamic load metric, 0-100. Drives the derived status and edge speed. */
+  load?: number
+
+  /** Component drill-down: internal sub-diagram (functions, endpoints, …). */
+  children?: ComponentChildren
+
+  /** Database drill-down: relational schema. */
+  tables?: DbTable[]
+  relations?: DbRelation[]
+
+  /** Client drill-down: page wireframe / UI design. */
+  wireframe?: Wireframe
+
+  /** Derived at render time (not persisted): impacted by an upstream failure. */
+  impacted?: boolean
+
+  [key: string]: unknown
+}
+
+export type AppNode = Node<DiagramNodeData>
+
+/** Communication protocol of a connection between two components. */
+export type EdgeProtocol = 'http' | 'grpc' | 'event' | 'db' | 'tcp' | 'other'
+
+/** Whether the call is synchronous (request/response) or asynchronous (fire-and-forget). */
+export type EdgeSync = 'sync' | 'async'
+
+/** Animation rendered along a connection. */
+export type EdgeAnimation = 'none' | 'flow' | 'pulse' | 'pubsub'
+
+export interface DiagramEdgeData {
+  label?: string
+  protocol: EdgeProtocol
+  sync: EdgeSync
+  animation?: EdgeAnimation
+  /** Derived at render time (not persisted). */
+  broken?: boolean
+  srcLoad?: number
+  [key: string]: unknown
+}
+
+export type AppEdge = Edge<DiagramEdgeData>
+
+/** A complete, serializable diagram. This is exactly what we persist / export. */
+export interface Diagram {
+  id: string
+  name: string
+  nodes: AppNode[]
+  edges: AppEdge[]
+  updatedAt: number
+}
+
+export const SCHEMA_VERSION = 3
+
+/** Shape of an exported `.json` file. */
+export interface DiagramFile {
+  schema: 'architect-diagram'
+  version: number
+  diagram: Diagram
+}
