@@ -3,11 +3,17 @@ import type { Node, Edge } from '@xyflow/react'
 /** The kind of architectural component a node represents. */
 export type NodeKind =
   | 'service'
+  | 'serverless'
   | 'database'
+  | 'storage'
   | 'queue'
   | 'gateway'
-  | 'client'
+  | 'loadbalancer'
+  | 'cdn'
   | 'cache'
+  | 'client'
+  | 'scheduler'
+  | 'monitoring'
   | 'external'
   | 'group'
 

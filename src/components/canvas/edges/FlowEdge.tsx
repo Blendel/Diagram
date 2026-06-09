@@ -33,12 +33,11 @@ export function FlowEdge({
   const broken = !!data?.broken
   const srcLoad = Math.max(0, Math.min(100, data?.srcLoad ?? 0))
 
-  // A broken (cascaded failure) link is never animated.
+  // A broken (cascaded failure) link is never animated, but keeps its arrow.
   const animation: EdgeAnimation = broken
     ? 'none'
     : data?.animation ?? (data?.sync === 'async' ? 'flow' : 'none')
 
-  // Animation speed scales with the source node's load: more load → faster.
   const dotDur = Math.max(0.22, 1.3 - (srcLoad / 100) * 1.05)
   const dashDur = Math.max(0.18, 0.9 - (srcLoad / 100) * 0.72)
 
@@ -50,11 +49,11 @@ export function FlowEdge({
       <BaseEdge
         id={id}
         path={path}
-        markerEnd={broken ? undefined : markerEnd}
+        markerEnd={markerEnd}
         style={{
           stroke,
           strokeWidth,
-          opacity: broken ? 0.85 : 1,
+          opacity: broken ? 0.9 : 1,
           ...(broken ? { strokeDasharray: '5 5' } : {}),
           ...(animation === 'flow'
             ? { strokeDasharray: '6 4', animation: `dashdraw ${dashDur}s linear infinite` }
@@ -84,9 +83,7 @@ export function FlowEdge({
         <EdgeLabelRenderer>
           <div
             className="absolute grid place-items-center w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold shadow pointer-events-none"
-            style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            }}
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
             title="Connessione interrotta"
           >
             ✕

@@ -1,5 +1,20 @@
 import type { ComponentType } from 'react'
-import { Boxes, Database, Inbox, Network, Monitor, Zap, Box, Cloud } from 'lucide-react'
+import {
+  Boxes,
+  Database,
+  Inbox,
+  Network,
+  Monitor,
+  Zap,
+  Box,
+  Cloud,
+  SquareFunction,
+  HardDrive,
+  Scale,
+  Globe,
+  Clock,
+  Activity,
+} from 'lucide-react'
 import type { NodeKind, NodeShape, NodeStatus } from '../types/diagram'
 
 /** Minimal prop surface shared by all lucide icons we use. */
@@ -79,6 +94,60 @@ export const NODE_CATALOG: Record<NodeKind, NodeKindMeta> = {
     description: 'Cache in memoria (Redis…)',
     defaultShape: 'diamond',
   },
+  serverless: {
+    kind: 'serverless',
+    label: 'Funzione serverless',
+    icon: SquareFunction,
+    accent: '#6366f1',
+    soft: '#eef2ff',
+    description: 'Lambda / Cloud Function',
+    defaultShape: 'rounded',
+  },
+  storage: {
+    kind: 'storage',
+    label: 'Object storage',
+    icon: HardDrive,
+    accent: '#b45309',
+    soft: '#fffbeb',
+    description: 'Blob / S3 / file store',
+    defaultShape: 'cylinder',
+  },
+  loadbalancer: {
+    kind: 'loadbalancer',
+    label: 'Load balancer',
+    icon: Scale,
+    accent: '#0ea5e9',
+    soft: '#f0f9ff',
+    description: 'Bilanciatore di carico',
+    defaultShape: 'hexagon',
+  },
+  cdn: {
+    kind: 'cdn',
+    label: 'CDN',
+    icon: Globe,
+    accent: '#06b6d4',
+    soft: '#ecfeff',
+    description: 'Content delivery network',
+    defaultShape: 'pill',
+  },
+  scheduler: {
+    kind: 'scheduler',
+    label: 'Scheduler / Cron',
+    icon: Clock,
+    accent: '#db2777',
+    soft: '#fdf2f8',
+    description: 'Job pianificati / cron',
+    defaultShape: 'rounded',
+  },
+  monitoring: {
+    kind: 'monitoring',
+    label: 'Monitoring',
+    icon: Activity,
+    accent: '#16a34a',
+    soft: '#f0fdf4',
+    description: 'Osservabilità / metriche / alert',
+    defaultShape: 'rounded',
+  },
   external: {
     kind: 'external',
     label: 'Sistema esterno',
@@ -102,11 +171,17 @@ export const NODE_CATALOG: Record<NodeKind, NodeKindMeta> = {
 /** Catalog entries shown in the palette (everything except the implicit group flow). */
 export const PALETTE_ORDER: NodeKind[] = [
   'service',
-  'database',
-  'queue',
+  'serverless',
   'gateway',
+  'loadbalancer',
+  'queue',
+  'database',
+  'storage',
   'cache',
+  'cdn',
   'client',
+  'scheduler',
+  'monitoring',
   'external',
   'group',
 ]

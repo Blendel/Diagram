@@ -9,6 +9,14 @@ export const DEFAULT_MARKER = {
   height: 18,
 } as const
 
+/** Red arrowhead used on broken / unavailable connections (direction stays visible). */
+export const BROKEN_MARKER = {
+  type: MarkerType.ArrowClosed,
+  color: '#ef4444',
+  width: 18,
+  height: 18,
+} as const
+
 export interface ProtocolMeta {
   label: string
   color: string
