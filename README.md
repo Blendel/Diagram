@@ -20,6 +20,24 @@ npm run build    # typecheck + build di produzione in dist/
 npm run preview  # anteprima della build
 ```
 
+## Eseguibile desktop portable (Tauri)
+
+L'app è impacchettabile come **eseguibile desktop nativo** con
+[Tauri](https://tauri.app) (richiede la toolchain **Rust**).
+
+```bash
+npm run tauri:dev        # avvia l'app desktop in sviluppo
+npm run tauri:build      # eseguibile PORTABLE (niente installer)
+npm run tauri:installer  # genera anche gli installer NSIS/MSI
+```
+
+- **Portable**: `npm run tauri:build` produce un singolo file
+  `src-tauri/target/release/architect.exe` (pochi MB) che si avvia
+  **senza installazione** — basta copiarlo ed eseguirlo.
+- Usa il runtime **WebView2**, preinstallato su Windows 10/11. Su macchine più
+  vecchie senza WebView2 va installato una volta (oppure usare un bundle a
+  runtime fisso).
+
 ## Funzionalità
 
 - **Nodi tipizzati**: servizio, database, coda/broker, API gateway, cache, client,
@@ -69,6 +87,7 @@ src/
 - [x] Selezione multipla + operazioni di gruppo (allinea/distribuisci/colore/stato)
 - [x] Annidamento reale dei nodi nei gruppi (parent/extent on drag)
 - [x] Auto-layout (dagre)
+- [x] Eseguibile desktop portable (Tauri)
 - [ ] Aggancio a dati reali per gli stati live (health check / telemetria)
 - [ ] Backend + condivisione / collaborazione
 

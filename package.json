@@ -7,10 +7,15 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build --no-bundle",
+    "tauri:installer": "tauri build"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
+    "@tauri-apps/api": "^2.11.0",
     "@xyflow/react": "^12.11.0",
     "html-to-image": "^1.11.13",
     "idb-keyval": "^6.2.5",
@@ -22,6 +27,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.0",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
