@@ -52,6 +52,7 @@ export function FlowCanvas() {
   const { screenToFlowPosition, fitView } = useReactFlow()
   const [helperH, setHelperH] = useState<number | undefined>(undefined)
   const [helperV, setHelperV] = useState<number | undefined>(undefined)
+  const [hoverNodeId, setHoverNodeId] = useState<string | null>(null)
 
   // Derive failure cascade and inject render-only flags into nodes/edges.
   const { impacted, broken } = useMemo(
@@ -93,6 +94,39 @@ export function FlowCanvas() {
       }),
     [rawEdges, broken, loadById],
   )
+
+  // Connection-focus: hovering a node highlights its edges + neighbours and
+  // fades the rest, to untangle dense routing.
+  const focus = useMemo(() => {
+    if (!hoverNodeId) return null
+    const activeEdges = new Set<string>()
+    const activeNodes = new Set<string>([hoverNodeId])
+    for (const e of rawEdges) {
+      if (e.source === hoverNodeId || e.target === hoverNodeId) {
+        activeEdges.add(e.id)
+        activeNodes.add(e.source)
+        activeNodes.add(e.target)
+      }
+    }
+    return { activeEdges, activeNodes }
+  }, [hoverNodeId, rawEdges])
+
+  const displayNodes = useMemo(() => {
+    if (!focus) return nodes
+    return nodes.map((n) =>
+      n.type === 'group' || focus.activeNodes.has(n.id)
+        ? n
+        : { ...n, data: { ...n.data, dimmed: true } },
+    )
+  }, [nodes, focus])
+
+  const displayEdges = useMemo(() => {
+    if (!focus) return edges
+    return edges.map((e) => {
+      const active = focus.activeEdges.has(e.id)
+      return { ...e, zIndex: active ? 1000 : 0, data: { ...e.data, dimmed: !active, focused: active } }
+    })
+  }, [edges, focus])
 
   const onSelectionChange = useCallback(
     ({ nodes: selNodes, edges: selEdges }: OnSelectionChangeParams) => {
@@ -160,6 +194,11 @@ export function FlowCanvas() {
     [openDetail],
   )
 
+  const onNodeMouseEnter = useCallback((_: ReactMouseEvent, node: AppNode) => {
+    if (node.type !== 'group') setHoverNodeId(node.id)
+  }, [])
+  const onNodeMouseLeave = useCallback(() => setHoverNodeId(null), [])
+
   const onNodeContextMenu = useCallback(
     (e: ReactMouseEvent, node: AppNode) => {
       e.preventDefault()
@@ -202,8 +241,8 @@ export function FlowCanvas() {
       onDoubleClick={onWrapperDoubleClick}
     >
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChangeWrapped}
@@ -212,6 +251,8 @@ export function FlowCanvas() {
         onNodeDragStart={() => pushHistory()}
         onNodeDragStop={(_, node) => reparentNode(node.id)}
         onSelectionChange={onSelectionChange}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeDoubleClick={onEdgeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}

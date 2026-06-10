@@ -21,6 +21,7 @@ export function ComponentNode({ data, selected }: NodeProps<AppNode>) {
   const shape = getShape(data.shape ?? meta.defaultShape)
   const subtitle = data.technology || meta.label
   const load = Math.max(0, Math.min(100, data.load ?? 0))
+  const dimmed = !!data.dimmed
 
   const failing = data.status === 'down' || data.status === 'degraded'
   const impacted = !!data.impacted && !failing
@@ -74,7 +75,10 @@ export function ComponentNode({ data, selected }: NodeProps<AppNode>) {
   // --- Compact silhouette shapes (circle / hexagon / diamond) ---
   if (shape.variant === 'compact') {
     return (
-      <div className="relative grid place-items-center" style={{ width: 150, height: 150 }}>
+      <div
+        className="relative grid place-items-center"
+        style={{ width: 150, height: 150, opacity: dimmed ? 0.25 : 1, transition: 'opacity 150ms ease' }}
+      >
         {handles}
         <div
           className={showPulse && !selected ? 'node-pulse' : undefined}
@@ -158,7 +162,7 @@ export function ComponentNode({ data, selected }: NodeProps<AppNode>) {
 
   // --- Card shapes (rounded / rectangle / pill) ---
   return (
-    <Wrapper>
+    <Wrapper dimmed={dimmed}>
       {handles}
       <div
         className={`shadow-sm overflow-hidden ${showPulse && !selected ? 'node-pulse' : ''}`}
@@ -179,9 +183,12 @@ export function ComponentNode({ data, selected }: NodeProps<AppNode>) {
   )
 }
 
-function Wrapper({ children }: { children: ReactNode }) {
+function Wrapper({ children, dimmed }: { children: ReactNode; dimmed?: boolean }) {
   return (
-    <div className="relative" style={{ minWidth: 184, maxWidth: 260 }}>
+    <div
+      className="relative"
+      style={{ minWidth: 184, maxWidth: 260, opacity: dimmed ? 0.25 : 1, transition: 'opacity 150ms ease' }}
+    >
       {children}
     </div>
   )

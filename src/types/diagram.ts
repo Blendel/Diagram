@@ -287,6 +287,8 @@ export interface DiagramNodeData {
 
   /** Derived at render time (not persisted): impacted by an upstream failure. */
   impacted?: boolean
+  /** Derived at render time: faded out because another node has focus. */
+  dimmed?: boolean
 
   [key: string]: unknown
 }
@@ -315,6 +317,9 @@ export interface DiagramEdgeData {
   /** Derived at render time (not persisted). */
   broken?: boolean
   srcLoad?: number
+  /** Derived at render time: connection-focus highlighting. */
+  dimmed?: boolean
+  focused?: boolean
   [key: string]: unknown
 }
 

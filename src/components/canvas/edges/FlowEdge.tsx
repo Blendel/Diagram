@@ -32,6 +32,8 @@ export function FlowEdge({
 
   const proto = PROTOCOL_META[data?.protocol ?? 'http']
   const broken = !!data?.broken
+  const dimmed = !!data?.dimmed
+  const focused = !!data?.focused
   const srcLoad = Math.max(0, Math.min(100, data?.srcLoad ?? 0))
 
   // A broken (cascaded failure) link is never animated, but keeps its arrow.
@@ -42,8 +44,11 @@ export function FlowEdge({
   const dotDur = Math.max(0.22, 1.3 - (srcLoad / 100) * 1.05)
   const dashDur = Math.max(0.18, 0.9 - (srcLoad / 100) * 0.72)
 
-  const stroke = broken ? '#ef4444' : selected ? '#2563eb' : proto.color
-  const strokeWidth = broken ? 2 : selected ? 2.5 : 1.8
+  const stroke = broken ? '#ef4444' : selected || focused ? '#2563eb' : proto.color
+  const strokeWidth = (broken ? 2 : selected ? 2.5 : 1.8) + (focused ? 0.8 : 0)
+  // Connection-focus: fade unrelated edges right down so the active path pops.
+  const edgeOpacity = dimmed ? 0.1 : broken ? 0.9 : 1
+  const labelOpacity = dimmed ? 0.12 : 1
 
   return (
     <>
@@ -55,7 +60,8 @@ export function FlowEdge({
         style={{
           stroke,
           strokeWidth,
-          opacity: broken ? 0.9 : 1,
+          opacity: edgeOpacity,
+          transition: 'opacity 150ms ease',
           ...(broken ? { strokeDasharray: '5 5' } : {}),
           ...(animation === 'flow'
             ? { strokeDasharray: '6 4', animation: `dashdraw ${dashDur}s linear infinite` }
@@ -63,13 +69,13 @@ export function FlowEdge({
         }}
       />
 
-      {animation === 'pulse' && (
+      {animation === 'pulse' && !dimmed && (
         <circle r={4} fill={stroke}>
           <animateMotion dur={`${dotDur}s`} repeatCount="indefinite" path={path} />
         </circle>
       )}
 
-      {animation === 'pubsub' &&
+      {animation === 'pubsub' && !dimmed &&
         [0, 1, 2].map((i) => (
           <circle key={i} r={3.5} fill={stroke} opacity={0.9}>
             <animateMotion
@@ -85,7 +91,7 @@ export function FlowEdge({
         <EdgeLabelRenderer>
           <div
             className="absolute grid place-items-center w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold shadow pointer-events-none"
-            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, opacity: labelOpacity }}
             title="Connessione interrotta"
           >
             ✕
@@ -102,6 +108,7 @@ export function FlowEdge({
               background: 'var(--node-bg)',
               color: 'var(--node-text-muted)',
               border: '1px solid var(--node-border)',
+              opacity: labelOpacity,
             }}
           >
             {data.label}
@@ -116,6 +123,7 @@ export function FlowEdge({
             style={{
               transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY - 10}px)`,
               color: 'var(--node-text-muted)',
+              opacity: labelOpacity,
             }}
           >
             {data.sourceMult}
@@ -129,6 +137,7 @@ export function FlowEdge({
             style={{
               transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY - 10}px)`,
               color: 'var(--node-text-muted)',
+              opacity: labelOpacity,
             }}
           >
             {data.targetMult}
